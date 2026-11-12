@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from vyapaar_strategies import Parameter, Strategy
+from tantra_strategies import Parameter, Strategy
 
 
 class Demo(Strategy):

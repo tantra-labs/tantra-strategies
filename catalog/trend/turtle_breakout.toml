@@ -2,7 +2,7 @@ name = "turtle_breakout"
 title = "Turtle Breakout"
 family = "trend"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.turtle:TurtleBreakout"
+strategy = "tantra_strategies.strategies.turtle:TurtleBreakout"
 
 [params.instrument]
 default = "NSE:NIFTY50-INDEX"

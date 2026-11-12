@@ -1,8 +1,8 @@
 """Strategy authoring SDK: declarative parameters, bars, orders, indicators."""
 
-from vyapaar_strategies.sdk.bar import Bar
-from vyapaar_strategies.sdk.context import SimulatedContext, StrategyContext
-from vyapaar_strategies.sdk.indicators import (
+from tantra_strategies.sdk.bar import Bar
+from tantra_strategies.sdk.context import SimulatedContext, StrategyContext
+from tantra_strategies.sdk.indicators import (
     ATR,
     EMA,
     RSI,
@@ -10,7 +10,7 @@ from vyapaar_strategies.sdk.indicators import (
     BollingerBands,
     Indicator,
 )
-from vyapaar_strategies.sdk.order import (
+from tantra_strategies.sdk.order import (
     OrderEvent,
     OrderRequest,
     OrderSide,
@@ -18,8 +18,8 @@ from vyapaar_strategies.sdk.order import (
     OrderType,
     TimeInForce,
 )
-from vyapaar_strategies.sdk.parameter import Parameter
-from vyapaar_strategies.sdk.strategy import Strategy
+from tantra_strategies.sdk.parameter import Parameter
+from tantra_strategies.sdk.strategy import Strategy
 
 __all__ = [
     "ATR",

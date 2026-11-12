@@ -2,7 +2,7 @@ name = "twap"
 title = "TWAP Slicer"
 family = "execution"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.execution:TWAPSlicer"
+strategy = "tantra_strategies.strategies.execution:TWAPSlicer"
 
 [params.instrument]
 default = "NSE:RELIANCE-EQ"

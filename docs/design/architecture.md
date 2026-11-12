@@ -1,9 +1,9 @@
-# `vyapaar-strategies` — Architecture & Bounded Context
+# `tantra-strategies` — Architecture & Bounded Context
 
 **Bounded Context**: Production Strategy SDK & Declarative Step Catalog (Tier 6C).
 
-`vyapaar-strategies` is the canonical quantitative strategy repository of the
-Vyapaar ecosystem. It provides a pure-Python, Jesse-style strategy authoring SDK
+`tantra-strategies` is the canonical quantitative strategy repository of the
+Tantra ecosystem. It provides a pure-Python, Jesse-style strategy authoring SDK
 (`on_start` / `on_bar` / `on_tick` / `on_order_event` / `on_stop`), a ported
 catalog of StockSharp-inspired strategies, and a declarative manifest layer
 (step catalogs + versioned strategy/basket manifests) that names strategies by
@@ -12,8 +12,8 @@ catalog of StockSharp-inspired strategies, and a declarative manifest layer
 ## 1. 4-Zone Clean Package
 
 ```
-vyapaar-strategies/
-├── vyapaar_strategies/   # Zone 1: pure-Python SDK + strategies + manifest models
+tantra-strategies/
+├── tantra_strategies/   # Zone 1: pure-Python SDK + strategies + manifest models
 ├── catalog/              # Zone 2: declarative step.toml manifests (10 files, 8 families)
 ├── manifests/            # Zone 2: versioned strategy & basket sidecars (plan 0001)
 │   ├── strategies/       #   StrategyManifest TOML sidecars
@@ -24,7 +24,7 @@ vyapaar-strategies/
 └── docs/                 # Zone 4: architecture, code references, gaps, plans
 ```
 
-### Zone 1 — `vyapaar_strategies/`
+### Zone 1 — `tantra_strategies/`
 
 Pure Python 3.11+, zero network/filesystem I/O in strategy logic. All financial
 math uses `decimal.Decimal` (zero-floats policy).
@@ -34,7 +34,7 @@ math uses `decimal.Decimal` (zero-floats policy).
 | `sdk/` | `Strategy` base class + `IndicatorRegistry`, streaming indicators (`SMA`, `EMA`, `RSI`, `ATR`, `BollingerBands`), `Parameter` descriptor, `Bar`, order domain (`OrderRequest`/`OrderEvent`/`OrderSide`/`OrderType`/`OrderStatus`/`TimeInForce`), `StrategyContext` protocol + `SimulatedContext` harness, `QuoteState` mixin. |
 | `strategies/` | Ten ported strategy classes (see `code-strategies.md`). |
 | `manifest/` | Pydantic models: `StrategyManifest`, `BasketManifest`, `ParameterSpec`, `InstrumentSelector`, `CapitalAllocation`, `MemberStrategyRef`, `RiskBudget`, `PromotionStatus`/`PromotionRecord` and the `promote()` workflow (plan 0001). |
-| `_compat.py` | Optional interop with the `vyapaar` native wheel; `VYAAPAAR_AVAILABLE` flag, `decimal.Decimal` fallback. |
+| `_compat.py` | Optional interop with the `tantra` native wheel; `VYAAPAAR_AVAILABLE` flag, `decimal.Decimal` fallback. |
 
 ### Zone 2 — `catalog/` & `manifests/`
 
@@ -52,7 +52,7 @@ math uses `decimal.Decimal` (zero-floats policy).
 ### Zone 3 — `tests/`
 
 Tests live in `tests/` parallel to the package (never inlined into
-`vyapaar_strategies/`). Suites: `tests/sdk/` (indicators, parameters, strategy
+`tantra_strategies/`). Suites: `tests/sdk/` (indicators, parameters, strategy
 lifecycle), `tests/strategies/` (one file per strategy), `tests/manifests/`
 (manifest models, promotion, schema conformance), `tests/catalog/` (step.toml
 schema + strategy-class parity), `tests/test_init.py` (package export).
@@ -77,7 +77,7 @@ execution `StrategyContext` injected via `Strategy.run(context, bars)`.
 flowchart LR
     Bars["Bars (list[Bar])"] --> Run["Strategy.run(context, bars)"]
     Run --> Sim["SimulatedContext<br/>(deterministic fills)"]
-    Run --> Ctx["StrategyContext (Protocol)<br/>(live: vyapaar-runtime / vyapaar-exec)"]
+    Run --> Ctx["StrategyContext (Protocol)<br/>(live: tantra-runtime / tantra-exec)"]
     Strategy["Strategy: on_start / on_bar / on_tick* / on_order_event / on_stop"]
     Sim --> Strategy
     Ctx --> Strategy
@@ -98,11 +98,11 @@ flowchart LR
 - The `catalog/` step manifests are **schema-validated in-repo but not
   executed here**: `tools/validate_catalog.py` and `tests/catalog/` prove schema
   conformance and that every `module:Class` reference imports and instantiates.
-  Executing a step (backtest/live) is owned by `vyapaar-runtime` /
-  `vyapaar-exec`; visual-studio chaining is owned by `vyapaar-ui`. See
+  Executing a step (backtest/live) is owned by `tantra-runtime` /
+  `tantra-exec`; visual-studio chaining is owned by `tantra-ui`. See
   [gap 0003](../gaps/0003-catalog-declarative-only.md).
 - `BasketManifest` consumption (a multi-strategy run loop under a combined
-  capital/risk budget) is a `vyapaar-runtime-backtest` concern, cross-referenced
+  capital/risk budget) is a `tantra-runtime-backtest` concern, cross-referenced
   only — see [gap 0004](../gaps/0004-no-basket-run-loop.md).
 
 ## 4. Zero-Floats / Decimal Policy

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections import deque
 from decimal import Decimal
 
-from vyapaar_strategies.sdk.bar import Bar
+from tantra_strategies.sdk.bar import Bar
 
 
 class Indicator:

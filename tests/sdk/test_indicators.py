@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from vyapaar_strategies.sdk import Bar
-from vyapaar_strategies.sdk.indicators import (
+from tantra_strategies.sdk import Bar
+from tantra_strategies.sdk.indicators import (
     ATR,
     EMA,
     RSI,

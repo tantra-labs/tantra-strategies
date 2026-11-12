@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from vyapaar_strategies import BasketManifest, MemberStrategyRef
+from tantra_strategies import BasketManifest, MemberStrategyRef
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 BASKET_DIR = ROOT / "manifests" / "baskets"

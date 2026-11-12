@@ -7,7 +7,7 @@ each side and start quoting again only after a fill.
 
 from __future__ import annotations
 
-from vyapaar_strategies.sdk.order import OrderEvent, OrderSide, OrderStatus
+from tantra_strategies.sdk.order import OrderEvent, OrderSide, OrderStatus
 
 
 class QuoteState:

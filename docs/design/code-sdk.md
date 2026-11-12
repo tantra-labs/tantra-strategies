@@ -1,6 +1,6 @@
-# `vyapaar-strategies` — Strategy SDK Reference
+# `tantra-strategies` — Strategy SDK Reference
 
-Documents `vyapaar_strategies/sdk/`: the pure-Python strategy authoring SDK with
+Documents `tantra_strategies/sdk/`: the pure-Python strategy authoring SDK with
 Jesse-style lifecycle hooks, streaming `Decimal` indicators, a declarative
 `Parameter` descriptor, and a deterministic simulated execution context.
 
@@ -91,7 +91,7 @@ design — subclasses implement them).
 | `ATR(period=14)` | `Bar` | Wilder `_atr` set | true range max of `high-low`, `\|high-prev_close\|`, `\|low-prev_close\|`, Wilder-smoothed; raises `ValueError` before ready. |
 | `BollingerBands(period=20, deviations=2)` | `Decimal` | `len(history) == period` | `middle` / `upper` / `lower`; stddev via `Decimal.sqrt` on the variance. |
 
-Module-level helpers (import from `vyapaar_strategies.sdk.indicators` — not
+Module-level helpers (import from `tantra_strategies.sdk.indicators` — not
 re-exported at `sdk`/package level):
 
 ```python
@@ -214,6 +214,6 @@ Every price, quantity, position, indicator value, and threshold in the SDK is
 
 ## Related
 
-- `vyapaar_strategies/strategies/` — the ported strategies (`code-strategies.md`)
-- `vyapaar_strategies/manifest/` — versioned manifest models (`code-manifest.md`)
+- `tantra_strategies/strategies/` — the ported strategies (`code-strategies.md`)
+- `tantra_strategies/manifest/` — versioned manifest models (`code-manifest.md`)
 - `docs/gaps/0001-on-tick-not-dispatched.md`, `docs/gaps/0002-no-live-strategy-context.md`

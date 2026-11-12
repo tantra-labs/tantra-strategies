@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 import pytest
 from test_strategy_manifest import base_manifest
 
-from vyapaar_strategies import PromotionStatus, StrategyManifest
+from tantra_strategies import PromotionStatus, StrategyManifest
 
 
 def make_manifest() -> StrategyManifest:

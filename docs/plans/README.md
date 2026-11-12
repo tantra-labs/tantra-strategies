@@ -1,4 +1,4 @@
-# Plans Index — `vyapaar-strategies`
+# Plans Index — `tantra-strategies`
 
 Per workspace rule `.agents/rules/gap-tracking.md`:
 - Gaps are individual features (`docs/gaps/XXXX-*.md`).
@@ -34,4 +34,4 @@ the plan column below is `—` until a plan is written.
 
 | # | Title | Target Scope | Implemented In |
 |---|-------|--------------|----------------|
-| 0001 | Versioned Strategy Manifests & Basket Strategies | `vyapaar-strategies` | Implemented in commit `207a70c` (`StrategyManifest`, `BasketManifest`, promotion workflow) |
+| 0001 | Versioned Strategy Manifests & Basket Strategies | `tantra-strategies` | Implemented in commit `207a70c` (`StrategyManifest`, `BasketManifest`, promotion workflow) |

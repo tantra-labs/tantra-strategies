@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from conftest import make_bars
 
-from vyapaar_strategies import Bar, CashFuturesArbitrage, SimulatedContext
+from tantra_strategies import Bar, CashFuturesArbitrage, SimulatedContext
 
 CASH = "NSE:RELIANCE-EQ"
 FUT = "NFO:RELIANCE24DECFUT"

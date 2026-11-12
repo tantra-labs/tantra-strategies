@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://docs.vyapaar-labs.io/schema/basket-manifest.schema.json",
-  "title": "Vyapaar basket manifest",
+  "$id": "https://docs.tantra-labs.io/schema/basket-manifest.schema.json",
+  "title": "Tantra basket manifest",
   "description": "Declarative manifests/baskets/*.toml manifest (plan 0001 Phase 2): groups StrategyManifest references under one combined capital/risk budget. The 'member allocations sum to at most combined_capital' constraint and the single-mode (weight XOR allocation) rule are enforced by the BasketManifest pydantic model.",
   "type": "object",
   "required": ["basket_name", "version", "combined_capital", "member_strategies"],

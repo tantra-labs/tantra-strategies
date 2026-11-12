@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from conftest import make_bars
 
-from vyapaar_strategies import SimulatedContext, TWAPSlicer, VWAPSlicer
+from tantra_strategies import SimulatedContext, TWAPSlicer, VWAPSlicer
 
 INSTRUMENT = "NSE:RELIANCE-EQ"
 

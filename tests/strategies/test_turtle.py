@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from conftest import make_bars
 
-from vyapaar_strategies import SimulatedContext, TurtleBreakout
+from tantra_strategies import SimulatedContext, TurtleBreakout
 
 
 def test_turtle_enters_on_breakout_and_exits_on_downturn() -> None:

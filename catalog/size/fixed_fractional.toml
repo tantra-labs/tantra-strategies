@@ -2,7 +2,7 @@ name = "fixed_fractional"
 title = "Fixed Fractional Sizing"
 family = "size"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.sizing:FixedFractional"
+strategy = "tantra_strategies.strategies.sizing:FixedFractional"
 
 [params.instrument]
 default = "NSE:RELIANCE-EQ"

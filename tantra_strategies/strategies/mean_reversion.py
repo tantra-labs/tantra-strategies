@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from vyapaar_strategies.sdk import Bar, Parameter, Strategy
-from vyapaar_strategies.sdk.indicators import BollingerBands
+from tantra_strategies.sdk import Bar, Parameter, Strategy
+from tantra_strategies.sdk.indicators import BollingerBands
 
 
 class BollingerMeanReversion(Strategy):

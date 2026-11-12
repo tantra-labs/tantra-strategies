@@ -2,7 +2,7 @@ name = "covered_call"
 title = "Covered Call Writer"
 family = "options"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.options:CoveredCallWriter"
+strategy = "tantra_strategies.strategies.options:CoveredCallWriter"
 
 [params.underlying]
 default = "NSE:RELIANCE-EQ"

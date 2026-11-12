@@ -1,14 +1,14 @@
 # Gap 0005 — Basket `RiskBudget` Is a Phase-1 Simple Cap; No Allocation Optimizer
 
-**Status**: open — cross-repo dependency on `vyapaar-ledger-allocation`
+**Status**: open — cross-repo dependency on `tantra-ledger-allocation`
 
 ## What's Stubbed / Hardcoded
 
-`vyapaar_strategies/manifest/basket.py` — the module docstring states it
+`tantra_strategies/manifest/basket.py` — the module docstring states it
 directly:
 
 > The basket-level risk budget is deliberately a simple cap in Phase 1 (an
-> allocation-objective optimizer such as `vyapaar-ledger-allocation` is a later
+> allocation-objective optimizer such as `tantra-ledger-allocation` is a later
 > integration, out of scope).
 
 `RiskBudget` exposes only two numeric caps:
@@ -31,16 +31,16 @@ The manifest layer's job is to describe *deployable* baskets. A risk budget
 that is never consulted is declarative sugar: `max_position_fraction` and
 `max_loss` cannot currently bound a live or simulated basket's behavior. The
 proper fix belongs to the allocation/optimization side of the ecosystem
-(`vyapaar-ledger-allocation`), which is out of this repo's scope — this gap
+(`tantra-ledger-allocation`), which is out of this repo's scope — this gap
 records the dependency so the Phase-1 simplification is visible.
 
 ## How to Close It
 
 1. Integrate an allocation-objective optimizer (e.g.
-   `vyapaar-ledger-allocation`) that sizes member capital subject to
+   `tantra-ledger-allocation`) that sizes member capital subject to
    `risk_budget.max_position_fraction` and `max_loss`.
 2. In-repo: keep `RiskBudget` as the declarative contract and document that
-   enforcement happens in the basket run loop / `vyapaar-runtime-backtest`.
+   enforcement happens in the basket run loop / `tantra-runtime-backtest`.
 3. Add a test that a `RiskBudget` cap changes a basket's allocation when the
    naive weights would exceed it.
 

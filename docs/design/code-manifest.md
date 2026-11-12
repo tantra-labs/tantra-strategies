@@ -1,6 +1,6 @@
-# `vyapaar-strategies` — Manifest Reference
+# `tantra-strategies` — Manifest Reference
 
-Documents `vyapaar_strategies/manifest/`: the versioned, promotable strategy and
+Documents `tantra_strategies/manifest/`: the versioned, promotable strategy and
 basket manifests (plan 0001, Layer 3). All models are Pydantic v2
 `BaseModel`s with `extra="forbid"` and validate their own invariants on
 construction.
@@ -50,7 +50,7 @@ class ParameterSpec(BaseModel):
 class StrategyManifest(BaseModel):
     name: str                                   # ^[a-z0-9_]+$
     version: str                                # ^[0-9]+\.[0-9]+\.[0-9]+$  (semver pattern)
-    strategy: str                               # ^vyapaar_strategies\...:Class$
+    strategy: str                               # ^tantra_strategies\...:Class$
     parameters: dict[str, ParameterSpec]        # min_length 1
     target_instruments: InstrumentSelector
     capital_allocation: CapitalAllocation
@@ -104,7 +104,7 @@ pattern), and **exactly one** of `weight` (in `(0, 1]`) or `allocation`
 
 Phase-1 basket-level risk budget — deliberately a **simple cap** (per the
 module docstring; an allocation-objective optimizer such as
-`vyapaar-ledger-allocation` is a later, out-of-scope integration — see
+`tantra-ledger-allocation` is a later, out-of-scope integration — see
 [gap 0005](../gaps/0005-risk-budget-simple-cap.md)):
 
 ```python

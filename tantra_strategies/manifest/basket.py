@@ -3,7 +3,7 @@
 Phase 2 of plan 0001. A basket references one or more ``StrategyManifest``
 versions and validates that the combined allocation fits ``combined_capital``.
 The basket-level risk budget is deliberately a simple cap in Phase 1 (an
-allocation-objective optimizer such as ``vyapaar-ledger-allocation`` is a later
+allocation-objective optimizer such as ``tantra-ledger-allocation`` is a later
 integration, out of scope).
 """
 

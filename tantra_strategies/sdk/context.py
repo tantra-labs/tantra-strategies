@@ -6,8 +6,8 @@ import logging
 from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
-from vyapaar_strategies.sdk.bar import Bar
-from vyapaar_strategies.sdk.order import (
+from tantra_strategies.sdk.bar import Bar
+from tantra_strategies.sdk.order import (
     OrderEvent,
     OrderRequest,
     OrderSide,
@@ -41,7 +41,7 @@ class SimulatedContext:
         self._counter = 0
         self.events: list[OrderEvent] = []
         self.orders: list[OrderRequest] = []
-        self.logger = logger or logging.getLogger("vyapaar.strategy")
+        self.logger = logger or logging.getLogger("tantra.strategy")
 
     def feed(self, bar: Bar) -> None:
         """Deliver a new bar; resting limit orders are evaluated at its close."""

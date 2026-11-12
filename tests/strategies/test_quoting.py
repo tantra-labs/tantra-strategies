@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from conftest import make_bars
 
-from vyapaar_strategies import QuotingStrategy, SimulatedContext
+from tantra_strategies import QuotingStrategy, SimulatedContext
 
 INSTRUMENT = "NSE:NIFTY50-INDEX"
 

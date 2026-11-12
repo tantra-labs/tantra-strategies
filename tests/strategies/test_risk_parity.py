@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from conftest import make_bars
 
-from vyapaar_strategies import RiskParity, SimulatedContext
+from tantra_strategies import RiskParity, SimulatedContext
 
 NIFTY = "NSE:NIFTY50-INDEX"
 BANK = "NSE:BANKNIFTY-INDEX"

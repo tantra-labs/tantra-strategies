@@ -2,7 +2,7 @@ name = "quoting"
 title = "Quoting"
 family = "market_making"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.quoting:QuotingStrategy"
+strategy = "tantra_strategies.strategies.quoting:QuotingStrategy"
 
 [params.instrument]
 default = "NSE:NIFTY50-INDEX"

@@ -2,7 +2,7 @@ name = "market_making"
 title = "Market Making"
 family = "market_making"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.market_making:MarketMakingStrategy"
+strategy = "tantra_strategies.strategies.market_making:MarketMakingStrategy"
 
 [params.instrument]
 default = "NSE:RELIANCE-EQ"

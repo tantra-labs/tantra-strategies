@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from vyapaar_strategies import BasketManifest, StrategyManifest
+from tantra_strategies import BasketManifest, StrategyManifest
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 MANIFEST_DIR = ROOT / "manifests" / "strategies"

@@ -2,7 +2,7 @@ name = "cash_futures_arbitrage"
 title = "Cash-Futures Arbitrage"
 family = "arbitrage"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.arbitrage:CashFuturesArbitrage"
+strategy = "tantra_strategies.strategies.arbitrage:CashFuturesArbitrage"
 
 [params.cash_instrument]
 default = "NSE:RELIANCE-EQ"

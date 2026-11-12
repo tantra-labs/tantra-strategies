@@ -56,7 +56,7 @@ def schema_errors(data: dict[str, object], validator: object) -> list[str]:
 def validate_strategy_manifest(path: Path, validator: object) -> list[str]:
     data = tomllib.loads(path.read_text())
     errors = schema_errors(data, validator)
-    strategies = importlib.import_module("vyapaar_strategies")
+    strategies = importlib.import_module("tantra_strategies")
     try:
         manifest = strategies.StrategyManifest.model_validate(data)
     except Exception as exc:
@@ -74,7 +74,7 @@ def validate_basket_manifest(
 ) -> list[str]:
     data = tomllib.loads(path.read_text())
     errors = schema_errors(data, validator)
-    strategies = importlib.import_module("vyapaar_strategies")
+    strategies = importlib.import_module("tantra_strategies")
     try:
         basket = strategies.BasketManifest.model_validate(data)
     except Exception as exc:

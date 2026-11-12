@@ -1,4 +1,4 @@
-# `vyapaar-strategies` — Inter-Agent Handoff
+# `tantra-strategies` — Inter-Agent Handoff
 
 ## Phase / Slice Status
 * **Tier 6C (COMPLETE, `af20843`)**: Strategy SDK (`sdk/`) + 10 ported strategy
@@ -12,7 +12,7 @@
   `manifests/baskets/turtle_twap_basket.toml`; `schema/*-manifest.schema.json`;
   `tools/validate_manifests.py`; 42 tests in `tests/manifests/`.
 * **Gate (2026-11-06)**: `pytest` 119/119, `ruff check`/`format --check`,
-  `mypy` all PASS. No runtime (`vyapaar-runtime-backtest`) changes — consumption
+  `mypy` all PASS. No runtime (`tantra-runtime-backtest`) changes — consumption
   is cross-ref only.
 * **Docs (this change)**: `docs/roadmap/` dismantled → `docs/design/`
   (rewritten `architecture.md`, `code-{sdk,strategies,manifest,migration-map}.md`,
@@ -20,7 +20,7 @@
   index updated.
 
 ## Decisions & Discoveries
-* pyproject: removed `rust_decimal`; declared `vyapaar` + `pydantic`.
+* pyproject: removed `rust_decimal`; declared `tantra` + `pydantic`.
 * **Zero-float guard (ruff RUF032)**: `Decimal(<float literal>)` is rejected in
   source and tests; all literals are strings.
 * `SimulatedContext` holds resting limit orders re-checked per bar — quoting /
@@ -38,7 +38,7 @@
   run loop, 0005 Phase-2 risk budget. All cross-repo consumers are out of this
   repo's scope. In-repo slice with the most leverage: a deterministic
   catalog-driven smoke test / step runner (gap 0003) using `SimulatedContext`,
-  or a basket run-loop unit test once `vyapaar-runtime-backtest` lands basket
+  or a basket run-loop unit test once `tantra-runtime-backtest` lands basket
   consumption.
 
 ## Operating Invariants

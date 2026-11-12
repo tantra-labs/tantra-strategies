@@ -1,4 +1,4 @@
-# `vyapaar-strategies` Agent Guidelines & Architecture Invariants
+# `tantra-strategies` Agent Guidelines & Architecture Invariants
 
 **Subsystem**: Strategies (Production Strategy Catalog)
 **Language**: Python
@@ -7,8 +7,8 @@
 ---
 
 ## 1. Role & Architectural Hints
-* `vyapaar-strategies` is the canonical strategy repository:
-  1. **Python-First Strategy SDK**: Inherits from `vyapaar.Strategy`.
+* `tantra-strategies` is the canonical strategy repository:
+  1. **Python-First Strategy SDK**: Inherits from `tantra.Strategy`.
   2. **Ported StockSharp Strategies**: Quoting, Arbitrage, Market Making, TWAP/VWAP slicers, Turtle breakout, and Risk Parity.
   3. **Declarative Parameters**: All tunable inputs must use `Parameter(default=..., min=..., max=..., step=...)`.
   4. **Strict Research-Live Parity**: The exact same strategy class executes against historical Parquet bars and live WebSocket feeds.

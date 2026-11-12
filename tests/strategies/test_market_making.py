@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from conftest import make_bars
 
-from vyapaar_strategies import MarketMakingStrategy, SimulatedContext
+from tantra_strategies import MarketMakingStrategy, SimulatedContext
 
 INSTRUMENT = "NSE:RELIANCE-EQ"
 

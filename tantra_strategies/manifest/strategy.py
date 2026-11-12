@@ -3,7 +3,7 @@
 Phase 1 of plan 0001. Each ``manifests/strategies/*.toml`` file names the
 strategy class, the parameter defaults/bounds it was validated against, its
 target instruments, and its capital allocation (an absolute ``Money`` amount or
-a portfolio weight). The runtime consumption path (``vyapaar-runtime-backtest``
+a portfolio weight). The runtime consumption path (``tantra-runtime-backtest``
 ``catalog.rs`` / ``engine.rs``) is cross-referenced but not modified here.
 """
 
@@ -18,16 +18,16 @@ from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from vyapaar_strategies.manifest.params import ParameterSpec
-from vyapaar_strategies.manifest.version import (
+from tantra_strategies.manifest.params import ParameterSpec
+from tantra_strategies.manifest.version import (
     PROMOTION_ORDER,
     PromotionRecord,
     PromotionStatus,
     evidence_prefix,
     utc_now,
 )
-from vyapaar_strategies.sdk.parameter import Parameter
-from vyapaar_strategies.sdk.strategy import Strategy
+from tantra_strategies.sdk.parameter import Parameter
+from tantra_strategies.sdk.strategy import Strategy
 
 
 class InstrumentSelector(BaseModel):
@@ -76,7 +76,7 @@ class StrategyManifest(BaseModel):
 
     name: str = Field(pattern=r"^[a-z0-9_]+$")
     version: str = Field(pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$")
-    strategy: str = Field(pattern=r"^vyapaar_strategies\.[A-Za-z0-9_.]+:[A-Za-z_][A-Za-z0-9_]*$")
+    strategy: str = Field(pattern=r"^tantra_strategies\.[A-Za-z0-9_.]+:[A-Za-z_][A-Za-z0-9_]*$")
     parameters: dict[str, ParameterSpec] = Field(min_length=1)
     target_instruments: InstrumentSelector
     capital_allocation: CapitalAllocation

@@ -1,6 +1,6 @@
 name = "turtle_breakout"
 version = "0.1.0"
-strategy = "vyapaar_strategies.strategies.turtle:TurtleBreakout"
+strategy = "tantra_strategies.strategies.turtle:TurtleBreakout"
 promotion_status = "draft"
 
 [parameters.instrument]

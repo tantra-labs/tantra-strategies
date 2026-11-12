@@ -4,7 +4,7 @@
 
 ## What's Stubbed / Missing
 
-`vyapaar_strategies/sdk/strategy.py`:
+`tantra_strategies/sdk/strategy.py`:
 
 ```python
 # -- lifecycle hooks (overridable) -------------------------------------
@@ -22,7 +22,7 @@ def on_stop(self) -> None: ...
   `on_bar` per bar — never `on_tick` (`sdk/context.py:87-96`).
 
 A repo-wide grep confirms `on_tick` appears only in the docstring and the stub
-definition; nothing in `vyapaar_strategies/` or `tests/` dispatches a tick.
+definition; nothing in `tantra_strategies/` or `tests/` dispatches a tick.
 
 ## Why
 
@@ -45,6 +45,6 @@ market-making/quoting) cannot be consumed by this SDK.
 
 ## Verification
 
-`grep -rn "on_tick" vyapaar_strategies/` shows a dispatch site (not just the
+`grep -rn "on_tick" tantra_strategies/` shows a dispatch site (not just the
 stub); a tick-fed strategy in `tests/sdk/test_strategy_lifecycle.py` records
 ticks in order.

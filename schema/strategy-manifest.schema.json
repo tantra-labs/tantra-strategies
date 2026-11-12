@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://docs.vyapaar-labs.io/schema/strategy-manifest.schema.json",
-  "title": "Vyapaar strategy manifest",
+  "$id": "https://docs.tantra-labs.io/schema/strategy-manifest.schema.json",
+  "title": "Tantra strategy manifest",
   "description": "Declarative manifests/strategies/*.toml manifest (plan 0001 Phase 1): names a strategy class, its parameter defaults/bounds, target instruments and capital allocation for a versioned, promotable deployment. Exact-capital constraints (weight in (0, 1], exactly one of absolute/weight) are enforced by the StrategyManifest pydantic model.",
   "type": "object",
   "required": [
@@ -23,7 +23,7 @@
     },
     "strategy": {
       "type": "string",
-      "pattern": "^vyapaar_strategies\\.[A-Za-z0-9_.]+:[A-Za-z_][A-Za-z0-9_]*$"
+      "pattern": "^tantra_strategies\\.[A-Za-z0-9_.]+:[A-Za-z_][A-Za-z0-9_]*$"
     },
     "promotion_status": {
       "type": "string",

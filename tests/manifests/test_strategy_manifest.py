@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from vyapaar_strategies import StrategyManifest
+from tantra_strategies import StrategyManifest
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 MANIFEST_DIR = ROOT / "manifests" / "strategies"
@@ -22,7 +22,7 @@ def base_manifest() -> dict[str, object]:
     return {
         "name": "turtle_breakout",
         "version": "0.1.0",
-        "strategy": "vyapaar_strategies.strategies.turtle:TurtleBreakout",
+        "strategy": "tantra_strategies.strategies.turtle:TurtleBreakout",
         "parameters": {
             "entry_period": {"default": 20, "min": 5, "max": 60, "step": 1},
         },
@@ -62,7 +62,7 @@ def test_rejects_non_semver_version() -> None:
         StrategyManifest.model_validate({**base_manifest(), "version": "v1"})
 
 
-def test_rejects_strategy_reference_outside_vyapaar_strategies() -> None:
+def test_rejects_strategy_reference_outside_tantra_strategies() -> None:
     with pytest.raises(ValidationError):
         StrategyManifest.model_validate(
             {**base_manifest(), "strategy": "some_other_pkg.thing:Strategy"}

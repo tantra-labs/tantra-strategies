@@ -1,11 +1,11 @@
 # Gap 0003 — Catalog `step.toml` Is Declarative-Only; No In-Repo Step Executor
 
-**Status**: open — cross-repo dependency on `vyapaar-runtime` / `vyapaar-ui`
+**Status**: open — cross-repo dependency on `tantra-runtime` / `tantra-ui`
 
 ## What's Stubbed / Missing
 
 `catalog/**/*.toml` (10 files across 8 families) names each strategy as
-`strategy = "vyapaar_strategies.<module>:<Class>"` plus tunable `[params.*]`
+`strategy = "tantra_strategies.<module>:<Class>"` plus tunable `[params.*]`
 defaults. In this repo these manifests are **validated but never executed**:
 
 - `tools/validate_catalog.py` checks required keys, JSON-schema conformance
@@ -17,8 +17,8 @@ defaults. In this repo these manifests are **validated but never executed**:
 There is no in-repo code that loads a `catalog/*.toml`, builds the strategy,
 feeds it bars, and runs it (no executor / runner / CLI). The step schema's own
 description points consumption outward: *"for visual-studio chaining and Rust
-`StepManifest` parsing"* — i.e. `vyapaar-ui` (Strategy Studio canvas) and
-`vyapaar-runtime` (backtest/live step runner), both out of this repo.
+`StepManifest` parsing"* — i.e. `tantra-ui` (Strategy Studio canvas) and
+`tantra-runtime` (backtest/live step runner), both out of this repo.
 
 ## Why
 
@@ -35,8 +35,8 @@ series?) is not.
    `catalog`-consuming test) that loads each `step.toml`, runs the strategy
    through `SimulatedContext`, and asserts it produces no exceptions —
    **or**
-2. Wire the cross-repo consumer (`vyapaar-runtime-backtest` step runner /
-   `vyapaar-ui` canvas) and add a CI smoke test here that invokes it.
+2. Wire the cross-repo consumer (`tantra-runtime-backtest` step runner /
+   `tantra-ui` canvas) and add a CI smoke test here that invokes it.
 3. Either way, extend `tests/catalog/` from "imports and instantiates" to "runs
    N bars deterministically".
 

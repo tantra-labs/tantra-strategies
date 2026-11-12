@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from vyapaar_strategies.sdk import Bar, Parameter, Strategy
-from vyapaar_strategies.sdk.indicators import EMA
-from vyapaar_strategies.sdk.quoting import QuoteState
+from tantra_strategies.sdk import Bar, Parameter, Strategy
+from tantra_strategies.sdk.indicators import EMA
+from tantra_strategies.sdk.quoting import QuoteState
 
 
 class QuotingStrategy(QuoteState, Strategy):

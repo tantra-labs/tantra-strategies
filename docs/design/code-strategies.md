@@ -1,12 +1,12 @@
-# `vyapaar-strategies` — Ported Strategies Reference
+# `tantra-strategies` — Ported Strategies Reference
 
-Documents `vyapaar_strategies/strategies/`: ten strategy classes in nine
+Documents `tantra_strategies/strategies/`: ten strategy classes in nine
 modules, ported from the StockSharp idea-inheritance catalog, all subclasses of
 `Strategy` (two also mix in `QuoteState`). Every strategy is driven the same
 way:
 
 ```python
-from vyapaar_strategies import SimulatedContext, TurtleBreakout
+from tantra_strategies import SimulatedContext, TurtleBreakout
 
 strategy = TurtleBreakout(entry_period=20, exit_period=10)
 context = SimulatedContext()
@@ -128,7 +128,7 @@ corresponding `catalog/*.toml` step manifests.
 
 The exact same strategy class runs offline through `Strategy.run(context, bars)`
 with `SimulatedContext`. Running the same class against a live/feed-backed
-`StrategyContext` is a cross-repo concern (`vyapaar-runtime` / `vyapaar-exec`);
+`StrategyContext` is a cross-repo concern (`tantra-runtime` / `tantra-exec`);
 no such context exists in this repo — see
 [gap 0002](../gaps/0002-no-live-strategy-context.md).
 
@@ -140,6 +140,6 @@ All prices, spreads, thresholds, quantities, weights, and indicator values are
 
 ## Related
 
-- `vyapaar_strategies/sdk/` — base classes and primitives (`code-sdk.md`)
+- `tantra_strategies/sdk/` — base classes and primitives (`code-sdk.md`)
 - `catalog/` — step.toml manifests naming each strategy (`module:Class`)
 - `tests/strategies/` — one lifecycle test file per strategy

@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from conftest import make_bars
 
-from vyapaar_strategies import Bar, CoveredCallWriter, SimulatedContext
+from tantra_strategies import Bar, CoveredCallWriter, SimulatedContext
 
 UNDERLYING = "NSE:RELIANCE-EQ"
 CALL = "NFO:RELIANCE24DEC2500CE"

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from vyapaar_strategies.sdk import Bar, Parameter, Strategy
+from tantra_strategies.sdk import Bar, Parameter, Strategy
 
 
 class TWAPSlicer(Strategy):

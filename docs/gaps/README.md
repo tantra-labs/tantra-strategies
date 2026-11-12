@@ -1,4 +1,4 @@
-# Gap Index — `vyapaar-strategies`
+# Gap Index — `tantra-strategies`
 
 Per workspace rule `.agents/rules/gap-tracking.md`:
 - **Gaps** (`docs/gaps/XXXX-*.md`): individual missing features, stubs, or

@@ -2,7 +2,7 @@ name = "bollinger_mean_reversion"
 title = "Bollinger Mean Reversion"
 family = "mean_reversion"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.mean_reversion:BollingerMeanReversion"
+strategy = "tantra_strategies.strategies.mean_reversion:BollingerMeanReversion"
 
 [params.instrument]
 default = "NSE:RELIANCE-EQ"

@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from decimal import Decimal
 
-from vyapaar_strategies.sdk.bar import Bar
-from vyapaar_strategies.sdk.context import SimulatedContext, StrategyContext
-from vyapaar_strategies.sdk.indicators import (
+from tantra_strategies.sdk.bar import Bar
+from tantra_strategies.sdk.context import SimulatedContext, StrategyContext
+from tantra_strategies.sdk.indicators import (
     ATR,
     EMA,
     RSI,
@@ -15,7 +15,7 @@ from vyapaar_strategies.sdk.indicators import (
     BollingerBands,
     Indicator,
 )
-from vyapaar_strategies.sdk.order import (
+from tantra_strategies.sdk.order import (
     OrderEvent,
     OrderRequest,
     OrderSide,
@@ -62,7 +62,7 @@ class IndicatorRegistry:
 
 
 class Strategy:
-    """Base class for Vyapaar strategies.
+    """Base class for Tantra strategies.
 
     Lifecycle hooks (Jesse-style): ``on_start``, ``on_bar``, ``on_tick``,
     ``on_order_event``, ``on_stop``. Orders are authored through ``self.buy`` /

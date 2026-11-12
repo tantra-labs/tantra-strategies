@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from vyapaar_strategies import Bar
+from tantra_strategies import Bar
 
 
 def make_bars(

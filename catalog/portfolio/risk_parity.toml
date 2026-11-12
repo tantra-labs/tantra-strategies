@@ -2,7 +2,7 @@ name = "risk_parity"
 title = "Risk Parity"
 family = "portfolio"
 version = "1.0.0"
-strategy = "vyapaar_strategies.strategies.risk_parity:RiskParity"
+strategy = "tantra_strategies.strategies.risk_parity:RiskParity"
 
 [params.instruments]
 default = "NSE:NIFTY50-INDEX,NSE:BANKNIFTY-INDEX"

@@ -1,6 +1,6 @@
 name = "twap_slicer"
 version = "0.1.0"
-strategy = "vyapaar_strategies.strategies.execution:TWAPSlicer"
+strategy = "tantra_strategies.strategies.execution:TWAPSlicer"
 promotion_status = "draft"
 
 [parameters.instrument]

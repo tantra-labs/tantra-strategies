@@ -1,11 +1,11 @@
-# `vyapaar-strategies` — Implementation Record
+# `tantra-strategies` — Implementation Record
 
 Dismantled from the former `docs/roadmap/` (`roadmap.md` +
 `migration-verification.md`). Completed milestones are recorded here; remaining
 future work moved to [`docs/gaps/`](../gaps/README.md) and
 [`docs/plans/`](../plans/README.md).
 
-## Migration: `honba-strategies` → `vyapaar-strategies` (Tier 6C)
+## Migration: `honba-strategies` → `tantra-strategies` (Tier 6C)
 
 | Milestone | Status | Commit |
 |-----------|--------|--------|
@@ -35,7 +35,7 @@ fresh from the sub-guide contracts — see
 pytest -q              # 119 tests, all passing
 ruff check .           # clean
 ruff format --check .  # clean
-mypy vyapaar_strategies  # clean
+mypy tantra_strategies  # clean
 python tools/validate_catalog.py    # 10/10 catalog manifests ok
 python tools/validate_manifests.py  # 2 strategy + 1 basket manifest ok
 ```
@@ -43,7 +43,7 @@ python tools/validate_manifests.py  # 2 strategy + 1 basket manifest ok
 - Test distribution (computed from `tests/` incl. parametrization): SDK 18,
   strategies 26, manifests 42, catalog 32, `test_init` 1 — total **119**
   (matches the Layer 3 handoff gate).
-- Zero inline tests in `vyapaar_strategies/` (tests live in `tests/` only).
+- Zero inline tests in `tantra_strategies/` (tests live in `tests/` only).
 - Zero-floats gate: all prices/quantities/weights use `decimal.Decimal`
   (string literals; `Decimal(<float>)` is rejected by ruff RUF032).
 

@@ -1,4 +1,4 @@
-"""vyapaar-strategies — Production Strategy SDK & Declarative Step Catalog.
+"""tantra-strategies — Production Strategy SDK & Declarative Step Catalog.
 
 Tier 6C bounded context. Jesse-style strategy authoring with declarative
 ``Parameter`` descriptors, ``decimal.Decimal`` arithmetic, and a deterministic
@@ -7,8 +7,8 @@ simulated context for research-live parity testing.
 
 from __future__ import annotations
 
-from vyapaar_strategies._compat import VYAAPAAR_AVAILABLE
-from vyapaar_strategies.manifest import (
+from tantra_strategies._compat import VYAAPAAR_AVAILABLE
+from tantra_strategies.manifest import (
     BasketManifest,
     CapitalAllocation,
     InstrumentSelector,
@@ -19,7 +19,7 @@ from vyapaar_strategies.manifest import (
     RiskBudget,
     StrategyManifest,
 )
-from vyapaar_strategies.sdk import (
+from tantra_strategies.sdk import (
     Bar,
     OrderEvent,
     OrderRequest,
@@ -31,15 +31,15 @@ from vyapaar_strategies.sdk import (
     Strategy,
     TimeInForce,
 )
-from vyapaar_strategies.strategies.arbitrage import CashFuturesArbitrage
-from vyapaar_strategies.strategies.execution import TWAPSlicer, VWAPSlicer
-from vyapaar_strategies.strategies.market_making import MarketMakingStrategy
-from vyapaar_strategies.strategies.mean_reversion import BollingerMeanReversion
-from vyapaar_strategies.strategies.options import CoveredCallWriter
-from vyapaar_strategies.strategies.quoting import QuotingStrategy
-from vyapaar_strategies.strategies.risk_parity import RiskParity
-from vyapaar_strategies.strategies.sizing import FixedFractional
-from vyapaar_strategies.strategies.turtle import TurtleBreakout
+from tantra_strategies.strategies.arbitrage import CashFuturesArbitrage
+from tantra_strategies.strategies.execution import TWAPSlicer, VWAPSlicer
+from tantra_strategies.strategies.market_making import MarketMakingStrategy
+from tantra_strategies.strategies.mean_reversion import BollingerMeanReversion
+from tantra_strategies.strategies.options import CoveredCallWriter
+from tantra_strategies.strategies.quoting import QuotingStrategy
+from tantra_strategies.strategies.risk_parity import RiskParity
+from tantra_strategies.strategies.sizing import FixedFractional
+from tantra_strategies.strategies.turtle import TurtleBreakout
 
 __version__ = "0.1.0"
 
