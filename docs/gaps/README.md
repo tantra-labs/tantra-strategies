@@ -20,6 +20,7 @@ the remaining future work is enumerated below.
 | [0003](0003-catalog-declarative-only.md) | Catalog `step.toml` is declarative-only; no in-repo step executor | Medium | Open | — |
 | [0004](0004-no-basket-run-loop.md) | No `BasketManifest`-driven run loop in-repo | Medium | Open | — |
 | [0005](0005-risk-budget-simple-cap.md) | Basket `RiskBudget` is a Phase-1 simple cap; no allocation optimizer | Low | Open | — |
+| [0006](0006-strategy-sdk-stop-protection-and-options-context.md) | SDK has no stop-loss/trailing-stop primitive and no level-map/options context surface | High | Open | [0001](../plans/0001-elephant-edge-strategy.md) |
 
 The gaps are small and independent, so they are intentionally **not grouped
 into a plan**; the plan column is `—`.

@@ -12,13 +12,9 @@ and open gaps in [`docs/gaps/README.md`](../gaps/README.md).
 
 ## Active Plans
 
-The current open gaps (see [`docs/gaps/README.md`](../gaps/README.md)) are small
-and independent, so they are intentionally **not grouped into a plan document**;
-the plan column below is `—` until a plan is written.
-
 | # | Title | Target Scope | Status |
 |---|-------|--------------|--------|
-| — | (no active plan documents) | — | — |
+| [0001](0001-elephant-edge-strategy.md) | Elephant Edge (EE+) Intraday Strategy — level map, buy/sell signals, SL/TSL, positioning (with Order Blocks & OI/gamma confluence) | `tantra-strategies` (+ SDK additions in gap 0006) | Proposed — tracks gap 0006; master plan root `docs/plans/0005` |
 
 ## Open Gaps (un-grouped)
 
