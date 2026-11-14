@@ -3,47 +3,50 @@
 ## Phase / Slice Status
 * **Tier 6C (COMPLETE, `af20843`)**: Strategy SDK (`sdk/`) + 10 ported strategy
   classes (`strategies/`) + declarative `catalog/` (10 step.toml, 8 families) +
-  `schema/` + `tools/validate_catalog.py`. Source `honba-strategies` was
-  unavailable; implemented fresh from contracts.
+  `schema/` + `tools/validate_catalog.py`.
 * **Plan 0001 Layer 3 (COMPLETE, `207a70c`)**: `manifest/` package —
-  `StrategyManifest`, `BasketManifest`, `PromotionStatus`/`promote()`
-  (exactly-one-stage + `backtest:`/`paper:`/`live:` evidence prefixes). POC
-  sidecars `manifests/strategies/{turtle_breakout,twap_slicer}.toml`,
-  `manifests/baskets/turtle_twap_basket.toml`; `schema/*-manifest.schema.json`;
-  `tools/validate_manifests.py`; 42 tests in `tests/manifests/`.
-* **Gate (2026-11-06)**: `pytest` 119/119, `ruff check`/`format --check`,
-  `mypy` all PASS. No runtime (`tantra-runtime-backtest`) changes — consumption
-  is cross-ref only.
-* **Docs (this change)**: `docs/roadmap/` dismantled → `docs/design/`
-  (rewritten `architecture.md`, `code-{sdk,strategies,manifest,migration-map}.md`,
-  new `implementation-record.md`), new `docs/gaps/` (0001–0005), `docs/plans/`
-  index updated.
+  `StrategyManifest`, `BasketManifest`, promotion workflow, POC sidecars,
+  `tools/validate_manifests.py`.
+* **T8 track (COMPLETE 2026-11-14, gaps 0001–0005 closed)**: tick dispatch,
+  `LiveContext`, catalog step executor, basket run loop + `RiskBudget`
+  optimizer. 164 tests green, `ruff check`/`format --check` clean,
+  `validate_catalog.py` 10/10 + `validate_manifests.py` 3/3 ok.
 
 ## Decisions & Discoveries
-* pyproject: removed `rust_decimal`; declared `tantra` + `pydantic`.
-* **Zero-float guard (ruff RUF032)**: `Decimal(<float literal>)` is rejected in
-  source and tests; all literals are strings.
-* `SimulatedContext` holds resting limit orders re-checked per bar — quoting /
-  market-making strategies track open quotes via `QuoteState` +
-  `on_order_event` (OPEN/COMPLETE) so quotes never stack.
-* Bollinger bands in zero-volatility regimes collapse; mean reversion guards
-  with `lower < middle` to avoid buy/sell oscillation.
-* Donchian channels exclude the current bar (`highs[-N-1:-1]`).
-* `on_tick` is a declared stub: neither `Strategy.run` nor
-  `SimulatedContext.run` dispatches ticks (bars only) — gap 0001.
+* **Tick dispatch (gap 0001)**: `Tick` model (`sdk/tick.py`, exact Decimal,
+  `bid <= ask`) + `Strategy.run_ticks` / `SimulatedContext.run_ticks` /
+  `LiveContext.run_ticks`. `Strategy.run`/`run_ticks` duck-type the drive loop
+  (`getattr(context, "run")`) so `SimulatedContext`, `LiveContext`, and bare
+  protocol contexts all work.
+* **Live parity seam (gap 0002)**: `sdk/live.py` — `MarketDataFeed` /
+  `ExecutionGateway` runtime-checkable Protocols + `LiveContext` (feed-first
+  `current_price` with local fallback, COMPLETE fills mirrored into Decimal
+  positions). Same strategy + same bars under `SimulatedContext` and
+  `LiveContext` → identical order streams (parity test).
+* **Catalog executor (gap 0003)**: `tools/run_step.py` runs every `step.toml`
+  through `SimulatedContext` on a deterministic 45-bar series; proves
+  runnable + deterministic (two runs, identical event fingerprints).
+* **Basket run loop (gaps 0004/0005)**: `optimize_allocations` (in
+  `manifest/basket.py`) sizes member capital under the `RiskBudget` caps —
+  `max_position_fraction` (total + per-member) then `max_loss` (total
+  deployment ≤ cap; worst case = 100% loss of deployed capital). `basket_run.run_basket`
+  resolves members via `resolve_manifest`, runs each through `SimulatedContext`
+  under its slice, and raises `RiskBudgetViolation` when the notional position
+  fraction or realized loss exceeds the caps. Full `tantra-ledger-allocation`
+  optimizer remains cross-repo.
+* **Zero-float guard (ruff RUF032)**: `Decimal(<float literal>)` is rejected;
+  all literals are strings. RUF022 sorts `__all__` isort-style (constants,
+  CamelCase, `__version__`, then lowercase functions).
 
 ## Immediate Next Step
-* Open gaps (see `docs/gaps/README.md`): 0001 tick dispatch, 0002 live
-  `StrategyContext` (High), 0003 catalog step executor, 0004 `BasketManifest`
-  run loop, 0005 Phase-2 risk budget. All cross-repo consumers are out of this
-  repo's scope. In-repo slice with the most leverage: a deterministic
-  catalog-driven smoke test / step runner (gap 0003) using `SimulatedContext`,
-  or a basket run-loop unit test once `tantra-runtime-backtest` lands basket
-  consumption.
+* **Gap 0006 + plan 0001 (EE+)**: SDK stop-loss/trailing-stop primitive +
+  level-map/options context surface — the only open gap; needs
+  `tantra-core` plan 0003 / gap 0002 domain types (level map, options
+  positioning, gamma) first. See `docs/plans/0001-elephant-edge-strategy.md`.
 
 ## Operating Invariants
 * Zero floats in financial math; `Parameter` bounds/step validated at
   assignment; tests live in `tests/` only.
 * `docs/roadmap/` is gone — completed milestones live in
   `docs/design/implementation-record.md`; new work goes to `docs/gaps/`
-  (numbered 0006+ if added).
+  (numbered 0007+ if added).

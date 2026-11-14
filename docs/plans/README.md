@@ -20,11 +20,7 @@ and open gaps in [`docs/gaps/README.md`](../gaps/README.md).
 
 | Gap | Title | Plan |
 |-----|-------|------|
-| [0001](../gaps/0001-on-tick-not-dispatched.md) | `Strategy.on_tick` declared but never dispatched | — |
-| [0002](../gaps/0002-no-live-strategy-context.md) | No live/feed-backed `StrategyContext` in-repo | — |
-| [0003](../gaps/0003-catalog-declarative-only.md) | Catalog `step.toml` is declarative-only; no in-repo step executor | — |
-| [0004](../gaps/0004-no-basket-run-loop.md) | No `BasketManifest`-driven run loop in-repo | — |
-| [0005](../gaps/0005-risk-budget-simple-cap.md) | Basket `RiskBudget` is a Phase-1 simple cap | — |
+| [0006](../gaps/0006-strategy-sdk-stop-protection-and-options-context.md) | SDK has no stop-loss/trailing-stop primitive and no level-map/options context surface | [0001](0001-elephant-edge-strategy.md) |
 
 ## Implemented Plans
 

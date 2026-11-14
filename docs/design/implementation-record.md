@@ -28,6 +28,7 @@ fresh from the sub-guide contracts — see
 | Docs: code reference docs (`code-sdk.md`, `code-strategies.md`, `code-manifest.md`, `code-migration-map.md`) | `a5076c2` |
 | Docs: plans index cleanup (plan 0001 → Implemented) | `a838b16` |
 | Docs: `docs/roadmap/` dismantled into `docs/design/` + `docs/gaps/` + `docs/plans/` | this change |
+| T8 track (gaps 0001–0005): `Tick` model + `Strategy.run_ticks` / `SimulatedContext.run_ticks` tick dispatch; feed/gateway-backed `LiveContext` (`sdk/live.py`); catalog step executor (`tools/run_step.py`); basket run loop (`manifest/basket_run.py` + `optimize_allocations`); 31 new tests (164 total) | this change |
 
 ## Verification (recorded green gate, 2026-11-06, plan 0001)
 
@@ -54,8 +55,11 @@ below are future features, not unfinished port work.
 
 ## Open future work
 
-All open items now live in [`docs/gaps/`](../gaps/README.md) and
-[`docs/plans/`](../plans/README.md): tick-level dispatch (`0001`), a
-live/feed-backed `StrategyContext` (`0002`), an in-repo catalog step executor
-(`0003`), a `BasketManifest`-driven run loop (`0004`), and a Phase-2 basket risk
-budget / allocation optimizer (`0005`).
+The T8 track (2026-11-14) closed gaps 0001–0005: tick dispatch (`on_tick` +
+`Strategy.run_ticks` / `SimulatedContext.run_ticks`), the feed/gateway-backed
+`LiveContext` parity seam, the in-repo catalog step executor
+(`tools/run_step.py`), the `BasketManifest` run loop (`basket_run.run_basket`),
+and the `RiskBudget` allocation optimizer (`optimize_allocations`). Remaining
+open items now live in [`docs/gaps/`](../gaps/README.md) and
+[`docs/plans/`](../plans/README.md): the EE+ SDK stop-protection surface
+(`0006`) and the EE+ strategy plan (`0001`).

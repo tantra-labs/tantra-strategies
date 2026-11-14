@@ -71,39 +71,52 @@ schema + strategy-class parity), `tests/test_init.py` (package export).
 ## 2. Event Loop & Research–Live Parity Goal
 
 Strategies never talk to a broker or feed directly; they run inside an
-execution `StrategyContext` injected via `Strategy.run(context, bars)`.
+execution `StrategyContext` injected via `Strategy.run(context, bars)` /
+`Strategy.run_ticks(context, ticks)`.
 
 ```mermaid
 flowchart LR
-    Bars["Bars (list[Bar])"] --> Run["Strategy.run(context, bars)"]
+    Bars["Bars (list[Bar]) / Ticks (list[Tick])"] --> Run["Strategy.run / run_ticks(context, ...)"]
     Run --> Sim["SimulatedContext<br/>(deterministic fills)"]
-    Run --> Ctx["StrategyContext (Protocol)<br/>(live: tantra-runtime / tantra-exec)"]
-    Strategy["Strategy: on_start / on_bar / on_tick* / on_order_event / on_stop"]
+    Run --> Live["LiveContext<br/>(feed + gateway)"]
+    Run --> Ctx["StrategyContext (Protocol)<br/>(bare / other)"]
+    Strategy["Strategy: on_start / on_bar / on_tick / on_order_event / on_stop"]
     Sim --> Strategy
+    Live --> Strategy
     Ctx --> Strategy
     Strategy --> Orders["OrderRequest -> OrderEvent"]
 ```
 
-- `SimulatedContext` is the only concrete context shipped in this repo:
-  market orders fill immediately at the current bar close; resting limit orders
-  fill at their limit price once crossed and are re-checked per bar.
+- Two concrete contexts ship in-repo. `SimulatedContext` is the deterministic
+  offline harness: market orders fill immediately at the current price, resting
+  limit orders fill at their limit price once crossed and are re-checked per
+  bar/tick. `LiveContext` (gap 0002) is the research-live parity seam backed by
+  a `MarketDataFeed` + `ExecutionGateway`, serving prices from the feed and
+  routing orders through the gateway; the canonical Rust traits are owned by
+  `tantra-market` / `tantra-exec`.
 - The `StrategyContext` protocol (`submit`, `current_price`, `position`) is the
-  seam for a future live/feed-backed context. No such context exists in-repo
-  today — see [gap 0002](../gaps/0002-no-live-strategy-context.md).
-- `on_tick` is declared but never dispatched by either run path (bars only) —
-  see [gap 0001](../gaps/0001-on-tick-not-dispatched.md).
+  parity contract: any context with `run`/`run_ticks` drives itself, and a bare
+  protocol implementation is driven by the strategy's generic branch.
+- `on_tick` is fully dispatched (bar and tick paths both supported), so
+  tick-level market-making/quoting strategies run on the same SDK — closed
+  gaps 0001/0002.
 
 ## 3. Declarative Layers & Cross-Repo Consumption
 
-- The `catalog/` step manifests are **schema-validated in-repo but not
-  executed here**: `tools/validate_catalog.py` and `tests/catalog/` prove schema
-  conformance and that every `module:Class` reference imports and instantiates.
-  Executing a step (backtest/live) is owned by `tantra-runtime` /
-  `tantra-exec`; visual-studio chaining is owned by `tantra-ui`. See
-  [gap 0003](../gaps/0003-catalog-declarative-only.md).
-- `BasketManifest` consumption (a multi-strategy run loop under a combined
-  capital/risk budget) is a `tantra-runtime-backtest` concern, cross-referenced
-  only — see [gap 0004](../gaps/0004-no-basket-run-loop.md).
+- The `catalog/` step manifests are **proven runnable in-repo**:
+  `tools/validate_catalog.py` + `tests/catalog/` prove schema conformance and
+  that every `module:Class` reference imports and instantiates, and
+  `tools/run_step.py` + `tests/catalog/test_catalog_executor.py` run every step
+  through `SimulatedContext` against a deterministic bar series (gap 0003
+  closed). Executing a step against a live broker/feed remains owned by
+  `tantra-runtime` / `tantra-exec`; visual-studio chaining is owned by
+  `tantra-ui`.
+- `BasketManifest` consumption is now implemented in-repo as the reference
+  run loop: `optimize_allocations` sizes member capital under the `RiskBudget`
+  caps and `basket_run.run_basket` executes each member through
+  `SimulatedContext` and enforces the budget (`RiskBudgetViolation`) — gaps
+  0004/0005 closed. The production path in `tantra-runtime-backtest`
+  (catalog.rs/engine.rs) remains a cross-repo consumer.
 
 ## 4. Zero-Floats / Decimal Policy
 

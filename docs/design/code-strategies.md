@@ -10,7 +10,7 @@ from tantra_strategies import SimulatedContext, TurtleBreakout
 
 strategy = TurtleBreakout(entry_period=20, exit_period=10)
 context = SimulatedContext()
-strategy.run(context, bars)   # bars: list[Bar]
+strategy.run(context, bars)  # bars: list[Bar]
 ```
 
 ## Strategy classes
@@ -127,10 +127,11 @@ corresponding `catalog/*.toml` step manifests.
 ## Research–Live Parity
 
 The exact same strategy class runs offline through `Strategy.run(context, bars)`
-with `SimulatedContext`. Running the same class against a live/feed-backed
-`StrategyContext` is a cross-repo concern (`tantra-runtime` / `tantra-exec`);
-no such context exists in this repo — see
-[gap 0002](../gaps/0002-no-live-strategy-context.md).
+/ `Strategy.run_ticks(context, ticks)` with `SimulatedContext`, and through the
+feed/gateway-backed `LiveContext` (gap 0002, closed) — the same class and
+timestamped inputs produce identical order streams. Production feed/gateway
+implementations of the canonical `MarketDataFeed` / `ExecutionGateway` seams
+remain a cross-repo concern (`tantra-market` / `tantra-exec`).
 
 ## Zero-Floats Policy
 

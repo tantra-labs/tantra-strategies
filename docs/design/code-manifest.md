@@ -14,6 +14,7 @@ class PromotionStatus(StrEnum):
     PAPER = "paper"
     LIVE = "live"
 
+
 PROMOTION_ORDER: tuple[PromotionStatus, ...]  # draft -> backtested -> paper -> live
 ```
 
@@ -48,10 +49,10 @@ class ParameterSpec(BaseModel):
 
 ```python
 class StrategyManifest(BaseModel):
-    name: str                                   # ^[a-z0-9_]+$
-    version: str                                # ^[0-9]+\.[0-9]+\.[0-9]+$  (semver pattern)
-    strategy: str                               # ^tantra_strategies\...:Class$
-    parameters: dict[str, ParameterSpec]        # min_length 1
+    name: str  # ^[a-z0-9_]+$
+    version: str  # ^[0-9]+\.[0-9]+\.[0-9]+$  (semver pattern)
+    strategy: str  # ^tantra_strategies\...:Class$
+    parameters: dict[str, ParameterSpec]  # min_length 1
     target_instruments: InstrumentSelector
     capital_allocation: CapitalAllocation
     promotion_status: PromotionStatus = PromotionStatus.DRAFT
@@ -81,9 +82,9 @@ class StrategyManifest(BaseModel):
 
 ```python
 class BasketManifest(BaseModel):
-    basket_name: str                            # ^[a-z0-9_]+$
-    version: str                                # semver pattern
-    combined_capital: Decimal                   # > 0
+    basket_name: str  # ^[a-z0-9_]+$
+    version: str  # semver pattern
+    combined_capital: Decimal  # > 0
     member_strategies: list[MemberStrategyRef]  # min_length 1
     risk_budget: RiskBudget = RiskBudget()
 ```
@@ -102,16 +103,28 @@ pattern), and **exactly one** of `weight` (in `(0, 1]`) or `allocation`
 
 ### `RiskBudget`
 
-Phase-1 basket-level risk budget — deliberately a **simple cap** (per the
-module docstring; an allocation-objective optimizer such as
-`tantra-ledger-allocation` is a later, out-of-scope integration — see
-[gap 0005](../gaps/0005-risk-budget-simple-cap.md)):
+Basket-level risk budget sized by `optimize_allocations` and enforced by the
+basket run loop (`manifest/basket_run.py`); a full allocation-objective
+optimizer such as `tantra-ledger-allocation` is a later, cross-repo integration
+(gap 0005 closed):
 
 ```python
 class RiskBudget(BaseModel):
     max_position_fraction: Decimal | None = None  # in (0, 1]
-    max_loss: Decimal | None = None               # >= 0
+    max_loss: Decimal | None = None  # >= 0
 ```
+
+`optimize_allocations(basket)` returns one capital slice per member (quantized
+to paise): naive sizing is `weight * combined_capital` (or the absolute
+`allocation`), then `max_position_fraction` scales the total (and per-member)
+position fraction down to the cap and `max_loss` bounds total deployment
+(worst case = a 100% loss of deployed capital).
+
+`basket_run.run_basket(basket, bars)` resolves every `MemberStrategyRef` to its
+`StrategyManifest` sidecar, `instantiate()`s it, runs each member through
+`SimulatedContext` under its optimized slice, and raises `RiskBudgetViolation`
+when the combined notional position fraction exceeds `max_position_fraction`
+or the realized loss exceeds `max_loss`.
 
 ## On-disk manifests
 
@@ -127,6 +140,7 @@ class RiskBudget(BaseModel):
 |------|--------|
 | `tools/validate_manifests.py` | Strategy manifests: JSON schema + pydantic model + `validate_parameters()` + `instantiate()`. Basket manifests: JSON schema + pydantic model + member name/version resolves to a strategy manifest. |
 | `tools/validate_catalog.py` | `catalog/**/*.toml` against `schema/step.schema.json` + strategy import/instantiate. |
+| `tools/run_step.py` | **Executes** every `catalog/**/*.toml` through `SimulatedContext` on a deterministic bar series, asserting no exception and run-to-run determinism (gap 0003). |
 
 Schemas: `schema/strategy-manifest.schema.json`,
 `schema/basket-manifest.schema.json`, `schema/step.schema.json` (JSON Schema
@@ -142,4 +156,3 @@ allocation ranges are validated in exact `Decimal` arithmetic.
 
 - `docs/design/code-migration-map.md` — Tier 6C port origin
 - `docs/plans/README.md` — plan 0001 (implemented) and gap index
-- `docs/gaps/0004-no-basket-run-loop.md`, `docs/gaps/0005-risk-budget-simple-cap.md`

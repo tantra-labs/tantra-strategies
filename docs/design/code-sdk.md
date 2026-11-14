@@ -22,9 +22,9 @@ applies any `**overrides` with `setattr` (values are validated when they hit a
 |------|-----------|-------|
 | `on_start` | `(self) -> None` | Once per run, before the first bar. Declare indicators here. |
 | `on_bar` | `(self, bar: Bar) -> None` | Main strategy logic; driven by `run()`. |
-| `on_tick` | `(self, tick: object) -> None` | **Stub — never dispatched.** Neither `Strategy.run` nor `SimulatedContext.run` feeds ticks, only bars. See [gap 0001](../gaps/0001-on-tick-not-dispatched.md). |
-| `on_order_event` | `(self, event: OrderEvent) -> None` | Called for every order event (immediately in `submit()`, plus per-bar outbox fills under `SimulatedContext`). |
-| `on_stop` | `(self) -> None` | Once per run, after the last bar. |
+| `on_tick` | `(self, tick: Tick) -> None` | Tick-level logic; driven by `run_ticks()`. Every concrete context (`SimulatedContext`, `LiveContext`) dispatches it, with the same outbox drain order as bars. |
+| `on_order_event` | `(self, event: OrderEvent) -> None` | Called for every order event (immediately in `submit()`, plus per-bar/per-tick outbox fills under `SimulatedContext`). |
+| `on_stop` | `(self) -> None` | Once per run, after the last bar/tick. |
 
 ### Execution helpers
 
@@ -36,6 +36,7 @@ applies any `**overrides` with `setattr` (values are validated when they hit a
 | `position` | `position(instrument) -> Decimal` | Requires a context; context positions are exact `Decimal`. |
 | `current_price` | `current_price(instrument) -> Decimal` | Requires a context. |
 | `run` | `run(context: StrategyContext, bars: list[Bar]) -> None` | Harness (see below). |
+| `run_ticks` | `run_ticks(context: StrategyContext, ticks: list[Tick]) -> None` | Tick harness (see below). |
 | `indicators` | property | The `IndicatorRegistry`. |
 | `logger` | property | `logging.Logger` named `<module>.<ClassName>`. |
 
@@ -49,8 +50,9 @@ Calling `buy`/`sell`/`submit`/`position`/`current_price` before `run()` raises
 
 ```python
 def run(self, context: StrategyContext, bars: list[Bar]) -> None:
-    if isinstance(context, SimulatedContext):
-        context.run(self, bars)          # feed -> outbox events -> on_bar per bar
+    drive = getattr(context, "run", None)
+    if drive is not None:
+        drive(self, bars)  # feed -> outbox events -> on_bar per bar
     else:
         self._context = context
         self.on_start()
@@ -59,9 +61,31 @@ def run(self, context: StrategyContext, bars: list[Bar]) -> None:
         self.on_stop()
 ```
 
-For a `SimulatedContext` the context drives the loop and dispatches order events
-from the per-bar fill outbox. For any other `StrategyContext`, the strategy
-drives itself and events arrive synchronously from `submit()`.
+`run` duck-types the drive loop: any context with a `run` method drives itself
+(`SimulatedContext`, `LiveContext`), and a bare `StrategyContext` protocol
+implementation (no `run`) is driven by the strategy's generic branch. The
+`SimulatedContext`/`LiveContext` loops dispatch order events from the per-bar
+fill outbox; a bare context delivers events synchronously from `submit()`.
+
+### `run_ticks(context, ticks)` harness
+
+```python
+def run_ticks(self, context: StrategyContext, ticks: list[Tick]) -> None:
+    drive = getattr(context, "run_ticks", None)
+    if drive is not None:
+        drive(self, ticks)  # feed_tick -> outbox events -> on_tick per tick
+    else:
+        self._context = context
+        self.on_start()
+        for tick in ticks:
+            self.on_tick(tick)
+        self.on_stop()
+```
+
+Mirrors `run` for tick sequences: `SimulatedContext`/`LiveContext` drive via
+`feed_tick` + outbox drain + `on_tick`; a bare context is driven generically.
+Bars and ticks can be mixed across runs (same deterministic clock), enabling
+tick-level market-making/quoting strategies on the same SDK.
 
 ### `IndicatorRegistry`
 
@@ -134,10 +158,11 @@ All `StrEnum`s with lowercase values:
 class OrderRequest:
     instrument: str
     side: OrderSide
-    quantity: Decimal                  # coerced; must be > 0
+    quantity: Decimal  # coerced; must be > 0
     order_type: OrderType = OrderType.MARKET
-    limit_price: Decimal | None = None # coerced
+    limit_price: Decimal | None = None  # coerced
     tag: str | None = None
+
 
 @dataclass(frozen=True, slots=True)
 class OrderEvent:
@@ -164,12 +189,13 @@ class Bar:
     close: Decimal
     volume: int = 0
     interval: str = "1d"
+
     def to_dict(self) -> dict[str, object]: ...
 ```
 
 OHLC fields are coerced to `Decimal`; `high < low` raises `ValueError`.
 
-## Execution contexts (`sdk/context.py`)
+## Execution contexts (`sdk/context.py`, `sdk/live.py`)
 
 ```python
 @runtime_checkable
@@ -179,16 +205,61 @@ class StrategyContext(Protocol):
     def position(self, instrument: str) -> Decimal: ...
 ```
 
-`SimulatedContext` is the only concrete context in-repo:
+Two concrete contexts ship in-repo: the deterministic offline
+`SimulatedContext` and the feed/gateway-backed `LiveContext` (research-live
+parity seam, gap 0002).
+
+`SimulatedContext`:
 
 | Member | Semantics |
 |--------|-----------|
 | `feed(bar)` | Records the latest bar per instrument and re-evaluates resting limit orders at its close. |
-| `current_price(instrument)` | Latest fed close; `KeyError` if no bar fed for that instrument. |
+| `feed_tick(tick)` | Records the latest tick price per instrument and re-evaluates resting limit orders at its price. |
+| `current_price(instrument)` | Latest fed price (bar close or tick last price); `KeyError` if nothing fed for that instrument. |
 | `position(instrument)` | Net signed position (0 default). |
-| `submit(request)` | Market orders fill immediately at the current close. Limit orders fill at `limit_price` when already crossed (BUY `price <= limit`, SELL `price >= limit`), else rest and are re-checked every bar. Order ids `SIM-00001`… |
+| `submit(request)` | Market orders fill immediately at the current price. Limit orders fill at `limit_price` when already crossed (BUY `price <= limit`, SELL `price >= limit`), else rest and are re-checked on every subsequent bar/tick. Order ids `SIM-00001`… |
 | `run(strategy, bars)` | Drives `on_start` → per bar `feed` + outbox `on_order_event` + `on_bar` → `on_stop`. |
+| `run_ticks(strategy, ticks)` | Drives `on_start` → per tick `feed_tick` + outbox `on_order_event` + `on_tick` → `on_stop`. |
 | `events` / `orders` | Recorded `OrderEvent`s and `OrderRequest`s (used by tests to assert fills). |
+
+`Tick` (`sdk/tick.py`) is the canonical zero-float tick model:
+
+```python
+@dataclass(frozen=True, slots=True)
+class Tick:
+    instrument: str
+    ts: datetime
+    last_price: Decimal
+    volume: int = 0
+    bid: Decimal | None = None
+    ask: Decimal | None = None
+```
+
+`last_price`/`bid`/`ask` are coerced to `Decimal`; negative `last_price` and
+`bid > ask` raise `ValueError`. It mirrors the canonical `Tick` contract
+consumed by `tantra-market` feed adapters.
+
+`LiveContext` (`sdk/live.py`) is the parity seam against the canonical
+`MarketDataFeed` / `ExecutionGateway` seams (owned by `tantra-market` /
+`tantra-exec`):
+
+```python
+@runtime_checkable
+class MarketDataFeed(Protocol):
+    def current_price(self, instrument: str) -> Decimal: ...
+
+
+@runtime_checkable
+class ExecutionGateway(Protocol):
+    def submit(self, request: OrderRequest) -> OrderEvent: ...
+```
+
+`LiveContext(feed, gateway)` serves `current_price` from the injected feed
+(falling back to the most recently fed bar/tick price), routes `submit` through
+the injected gateway and mirrors COMPLETE fills into exact `Decimal` positions,
+and drives strategies via `run(strategy, bars)` / `run_ticks(strategy, ticks)`.
+The same strategy class run under `SimulatedContext` and `LiveContext` with the
+same timestamped bars produces identical order streams (research-live parity).
 
 ## `QuoteState` mixin (`sdk/quoting.py`)
 
@@ -216,4 +287,3 @@ Every price, quantity, position, indicator value, and threshold in the SDK is
 
 - `tantra_strategies/strategies/` — the ported strategies (`code-strategies.md`)
 - `tantra_strategies/manifest/` — versioned manifest models (`code-manifest.md`)
-- `docs/gaps/0001-on-tick-not-dispatched.md`, `docs/gaps/0002-no-live-strategy-context.md`

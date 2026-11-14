@@ -15,18 +15,17 @@ the remaining future work is enumerated below.
 
 | # | Title | Severity | Status | Plan |
 |---|-------|----------|--------|------|
-| [0001](0001-on-tick-not-dispatched.md) | `Strategy.on_tick` declared but never dispatched | Medium | Open | — |
-| [0002](0002-no-live-strategy-context.md) | No live/feed-backed `StrategyContext` in-repo (only `SimulatedContext`) | High | Open | — |
-| [0003](0003-catalog-declarative-only.md) | Catalog `step.toml` is declarative-only; no in-repo step executor | Medium | Open | — |
-| [0004](0004-no-basket-run-loop.md) | No `BasketManifest`-driven run loop in-repo | Medium | Open | — |
-| [0005](0005-risk-budget-simple-cap.md) | Basket `RiskBudget` is a Phase-1 simple cap; no allocation optimizer | Low | Open | — |
 | [0006](0006-strategy-sdk-stop-protection-and-options-context.md) | SDK has no stop-loss/trailing-stop primitive and no level-map/options context surface | High | Open | [0001](../plans/0001-elephant-edge-strategy.md) |
 
-The gaps are small and independent, so they are intentionally **not grouped
-into a plan**; the plan column is `—`.
+The remaining gap is the EE+ (Elephant Edge) SDK surface; it is intentionally
+**not** grouped into the T8 track (which closed 0001–0005 on 2026-11-14).
 
 ## Closed Gaps
 
 | # | Title | Closed In |
 |---|-------|-----------|
-| — | — | (none yet) |
+| 0001 | `Strategy.on_tick` declared but never dispatched — `Tick` model + `Strategy.run_ticks` / `SimulatedContext.run_ticks` / `LiveContext.run_ticks` dispatch (T8.1) | 2026-11-14 |
+| 0002 | No live/feed-backed `StrategyContext` in-repo (only `SimulatedContext`) — `LiveContext` + `MarketDataFeed`/`ExecutionGateway` seams in `sdk/live.py`, sim/live parity tests (T8.2) | 2026-11-14 |
+| 0003 | Catalog `step.toml` is declarative-only — in-repo executor `tools/run_step.py` proves every step runs deterministically on `SimulatedContext` (T8.3) | 2026-11-14 |
+| 0004 | No `BasketManifest`-driven run loop in-repo — `basket_run.run_basket` resolves members, sizes by `optimize_allocations`, enforces the `RiskBudget` (T8.4) | 2026-11-14 |
+| 0005 | Basket `RiskBudget` is a Phase-1 simple cap; no allocation optimizer — `optimize_allocations` cap math + run-loop enforcement; full `tantra-ledger-allocation` optimizer remains cross-repo (T8.5) | 2026-11-14 |

@@ -39,9 +39,10 @@ everywhere, tests in `tests/` parallel to `src/` (TDD, Red-Green-Refactor).
   `SimulatedContext` harness. **No `stop_loss()` helper, no trailing-stop
   primitive, no options/level-map data surface on `StrategyContext`** — the
   SDK additions below are the strategy's hard prerequisite (see gap 0006).
-- `on_tick` is declared but never dispatched (gap 0001) — EE+ runs on
-  `on_bar` (1-minute) plus a snapshot-based `on_levels`/options pull at the
-  open, so it is **not blocked** by gap 0001.
+- `on_tick` is dispatched via `Strategy.run_ticks` / `SimulatedContext.run_ticks`
+  (gap 0001 closed) — EE+ runs on `on_bar` (1-minute) plus a snapshot-based
+  `on_levels`/options pull at the open, and could add tick-level entry checks
+  once the level/options context surface ships (gap 0006).
 - `StrategyContext` is a 3-method protocol (`submit`, `current_price`,
   `position`) — EE+ needs a **level/options-aware context** (gap 0006) with
   honest degradation to `NotImplementedError`/`unavailable` until the upstream
