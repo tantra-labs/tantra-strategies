@@ -32,6 +32,7 @@ from tantra_strategies.sdk import (
     TimeInForce,
 )
 from tantra_strategies.strategies.arbitrage import CashFuturesArbitrage
+from tantra_strategies.strategies.composite_signal import CompositeSignalStrategy
 from tantra_strategies.strategies.execution import TWAPSlicer, VWAPSlicer
 from tantra_strategies.strategies.market_making import MarketMakingStrategy
 from tantra_strategies.strategies.mean_reversion import BollingerMeanReversion
@@ -50,6 +51,7 @@ __all__ = [
     "BollingerMeanReversion",
     "CapitalAllocation",
     "CashFuturesArbitrage",
+    "CompositeSignalStrategy",
     "CoveredCallWriter",
     "FixedFractional",
     "InstrumentSelector",
