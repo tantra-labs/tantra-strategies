@@ -13,6 +13,7 @@ from tantra_strategies.sdk.order import (
     OrderSide,
     OrderStatus,
 )
+from tantra_strategies.sdk.tick import Tick
 
 
 @runtime_checkable
@@ -35,6 +36,7 @@ class SimulatedContext:
 
     def __init__(self, logger: logging.Logger | None = None) -> None:
         self._bars: dict[str, Bar] = {}
+        self._prices: dict[str, Decimal] = {}
         self._positions: dict[str, Decimal] = {}
         self._resting: list[tuple[str, OrderRequest]] = []
         self._outbox: list[OrderEvent] = []
@@ -46,13 +48,19 @@ class SimulatedContext:
     def feed(self, bar: Bar) -> None:
         """Deliver a new bar; resting limit orders are evaluated at its close."""
         self._bars[bar.instrument] = bar
+        self._prices[bar.instrument] = bar.close
         self._process_resting(bar.close)
 
+    def feed_tick(self, tick: Tick) -> None:
+        """Deliver a new tick; resting limit orders are evaluated at its price."""
+        self._prices[tick.instrument] = tick.last_price
+        self._process_resting(tick.last_price)
+
     def current_price(self, instrument: str) -> Decimal:
-        bar = self._bars.get(instrument)
-        if bar is None:
-            raise KeyError(f"no bar fed for {instrument}")
-        return bar.close
+        price = self._prices.get(instrument)
+        if price is None:
+            raise KeyError(f"no price fed for {instrument}")
+        return price
 
     def position(self, instrument: str) -> Decimal:
         return self._positions.get(instrument, Decimal(0))
@@ -93,6 +101,18 @@ class SimulatedContext:
             for event in self._drain_outbox():
                 strategy.on_order_event(event)  # type: ignore[attr-defined]
             strategy.on_bar(bar)  # type: ignore[attr-defined]
+        strategy.on_stop()  # type: ignore[attr-defined]
+
+    # gap 0001 (tantra-strategies/docs/gaps/0001-*): tick dispatch entry point.
+    def run_ticks(self, strategy: object, ticks: list[Tick]) -> None:
+        """Drive a strategy through a tick sequence deterministically."""
+        strategy._context = self  # type: ignore[attr-defined]
+        strategy.on_start()  # type: ignore[attr-defined]
+        for tick in ticks:
+            self.feed_tick(tick)
+            for event in self._drain_outbox():
+                strategy.on_order_event(event)  # type: ignore[attr-defined]
+            strategy.on_tick(tick)  # type: ignore[attr-defined]
         strategy.on_stop()  # type: ignore[attr-defined]
 
     # -- internals ----------------------------------------------------------

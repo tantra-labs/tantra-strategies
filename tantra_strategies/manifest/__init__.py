@@ -4,7 +4,13 @@ Phase 1: :class:`StrategyManifest` sidecars. Phase 2: :class:`BasketManifest`.
 Phase 3: the :class:`PromotionStatus` workflow.
 """
 
-from tantra_strategies.manifest.basket import BasketManifest, MemberStrategyRef, RiskBudget
+from tantra_strategies.manifest.basket import (
+    BasketManifest,
+    MemberStrategyRef,
+    RiskBudget,
+    optimize_allocations,
+)
+from tantra_strategies.manifest.basket_run import BasketRunResult, RiskBudgetViolation, run_basket
 from tantra_strategies.manifest.params import ParameterSpec
 from tantra_strategies.manifest.strategy import (
     CapitalAllocation,
@@ -16,6 +22,7 @@ from tantra_strategies.manifest.version import PROMOTION_ORDER, PromotionRecord,
 __all__ = [
     "PROMOTION_ORDER",
     "BasketManifest",
+    "BasketRunResult",
     "CapitalAllocation",
     "InstrumentSelector",
     "MemberStrategyRef",
@@ -23,5 +30,8 @@ __all__ = [
     "PromotionRecord",
     "PromotionStatus",
     "RiskBudget",
+    "RiskBudgetViolation",
     "StrategyManifest",
+    "optimize_allocations",
+    "run_basket",
 ]

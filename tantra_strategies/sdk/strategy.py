@@ -6,7 +6,7 @@ import logging
 from decimal import Decimal
 
 from tantra_strategies.sdk.bar import Bar
-from tantra_strategies.sdk.context import SimulatedContext, StrategyContext
+from tantra_strategies.sdk.context import StrategyContext
 from tantra_strategies.sdk.indicators import (
     ATR,
     EMA,
@@ -21,6 +21,7 @@ from tantra_strategies.sdk.order import (
     OrderSide,
     OrderType,
 )
+from tantra_strategies.sdk.tick import Tick
 
 
 class IndicatorRegistry:
@@ -80,7 +81,7 @@ class Strategy:
     # -- lifecycle hooks (overridable) -------------------------------------
     def on_start(self) -> None: ...
     def on_bar(self, bar: Bar) -> None: ...
-    def on_tick(self, tick: object) -> None: ...
+    def on_tick(self, tick: Tick) -> None: ...
     def on_order_event(self, event: OrderEvent) -> None: ...
     def on_stop(self) -> None: ...
 
@@ -135,15 +136,30 @@ class Strategy:
         return self._logger
 
     # -- harness ------------------------------------------------------------
+    # gap 0001 (tantra-strategies/docs/gaps/0001-*): tick dispatch entry point.
+    # gap 0002 (tantra-strategies/docs/gaps/0002-*): live/feed-backed context seam.
     def run(self, context: StrategyContext, bars: list[Bar]) -> None:
         """Drive the strategy through a bar sequence (sim or live parity)."""
-        if isinstance(context, SimulatedContext):
-            context.run(self, bars)
+        drive = getattr(context, "run", None)
+        if drive is not None:
+            drive(self, bars)
         else:
             self._context = context
             self.on_start()
             for bar in bars:
                 self.on_bar(bar)
+            self.on_stop()
+
+    def run_ticks(self, context: StrategyContext, ticks: list[Tick]) -> None:
+        """Drive the strategy through a tick sequence (sim or live parity)."""
+        drive = getattr(context, "run_ticks", None)
+        if drive is not None:
+            drive(self, ticks)
+        else:
+            self._context = context
+            self.on_start()
+            for tick in ticks:
+                self.on_tick(tick)
             self.on_stop()
 
     def _require_context(self) -> StrategyContext:
