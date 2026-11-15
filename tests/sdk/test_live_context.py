@@ -17,6 +17,8 @@ from tantra_strategies.sdk import (
     Strategy,
     Tick,
 )
+from tantra_strategies.sdk.context import LevelsUnavailable, OptionsUnavailable
+from tantra_strategies.sdk.levels import LevelMap, OptionsSnapshot
 from tantra_strategies.sdk.live import ExecutionGateway, LiveContext, MarketDataFeed
 
 
@@ -141,6 +143,12 @@ class BareBarContext:
 
     def position(self, instrument: str) -> Decimal:
         return Decimal(0)
+
+    def level_map(self) -> LevelMap:
+        raise LevelsUnavailable("no level map seeded; tracked by tantra-market/docs/gaps/0005")
+
+    def options_snapshot(self, instrument: str, expiry: str | None = None) -> OptionsSnapshot:
+        raise OptionsUnavailable("no options seeded; tracked by tantra-data/docs/gaps/0016")
 
     def submit(self, request: OrderRequest) -> OrderEvent:
         event = OrderEvent(

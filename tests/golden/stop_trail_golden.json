@@ -1,0 +1,7 @@
+{
+  "long_reversal_sl": {"band": ["100", "102"], "buffer_atr": "0.25", "sl": "99.75"},
+  "short_breakout_sl": {"band": ["100", "102"], "buffer_atr": "0.25", "sl": "102.25"},
+  "atr_trail_long": {"sl": "99.75", "trail_distance": "2", "atr": "1.5", "extreme": "105", "new_sl": "102"},
+  "atr_trail_short": {"sl": "102.25", "trail_distance": "2", "atr": "1.5", "extreme": "96", "new_sl": "99"},
+  "swing_trail_long": {"sl": "99.75", "swing_level": "101.5", "new_sl": "101.5"}
+}

@@ -21,6 +21,7 @@ from tantra_strategies.sdk.order import (
     OrderSide,
     OrderType,
 )
+from tantra_strategies.sdk.stop_protection import StopProtection, StopUpdate, TrailMode
 from tantra_strategies.sdk.tick import Tick
 
 
@@ -66,9 +67,9 @@ class Strategy:
     """Base class for Tantra strategies.
 
     Lifecycle hooks (Jesse-style): ``on_start``, ``on_bar``, ``on_tick``,
-    ``on_order_event``, ``on_stop``. Orders are authored through ``self.buy`` /
-    ``self.sell`` or ``self.submit``; indicators are declared in ``on_start``
-    via ``self.indicators``.
+    ``on_order_event``, ``on_stop_update``, ``on_stop``. Orders are authored
+    through ``self.buy`` / ``self.sell`` or ``self.submit``; indicators are
+    declared in ``on_start`` via ``self.indicators``.
     """
 
     def __init__(self, **overrides: object) -> None:
@@ -83,6 +84,7 @@ class Strategy:
     def on_bar(self, bar: Bar) -> None: ...
     def on_tick(self, tick: Tick) -> None: ...
     def on_order_event(self, event: OrderEvent) -> None: ...
+    def on_stop_update(self, event: StopUpdate) -> None: ...
     def on_stop(self) -> None: ...
 
     # -- execution ----------------------------------------------------------
@@ -126,6 +128,86 @@ class Strategy:
 
     def current_price(self, instrument: str) -> Decimal:
         return self._require_context().current_price(instrument)
+
+    def stop_loss(
+        self,
+        side: OrderSide,
+        level_band: tuple[Decimal, Decimal],
+        buffer_atr: Decimal,
+    ) -> StopProtection:
+        """Initial SL beyond the level band (long: band_low - buffer; short: band_high + buffer)."""
+        band_low, band_high = level_band
+        if not isinstance(band_low, Decimal):
+            band_low = Decimal(str(band_low))
+        if not isinstance(band_high, Decimal):
+            band_high = Decimal(str(band_high))
+        if not isinstance(buffer_atr, Decimal):
+            buffer_atr = Decimal(str(buffer_atr))
+        if band_low >= band_high:
+            raise ValueError("level band must satisfy band_low < band_high")
+        if buffer_atr < 0:
+            raise ValueError("buffer_atr must be >= 0")
+        sl = band_low - buffer_atr if side is OrderSide.BUY else band_high + buffer_atr
+        if band_low < sl < band_high:
+            raise ValueError("stop inside level band")
+        return StopProtection(sl=sl)
+
+    def trail_stop(
+        self,
+        side: OrderSide,
+        stop: StopProtection,
+        *,
+        atr: Decimal | None = None,
+        extreme: Decimal | None = None,
+        swing_level: Decimal | None = None,
+    ) -> StopProtection:
+        """Return the updated StopProtection after trailing (ATR or SWING)."""
+        if stop.trail is TrailMode.OFF:
+            return stop
+        if stop.trail is TrailMode.ATR:
+            if atr is None or extreme is None:
+                raise ValueError("ATR trail requires atr and extreme")
+            if not isinstance(atr, Decimal):
+                atr = Decimal(str(atr))
+            if not isinstance(extreme, Decimal):
+                extreme = Decimal(str(extreme))
+            distance = stop.trail_distance * atr
+            if side is OrderSide.BUY:
+                new_sl = max(stop.sl, extreme - distance)
+            else:
+                new_sl = min(stop.sl, extreme + distance)
+        else:
+            if swing_level is None:
+                raise ValueError("SWING trail requires swing_level")
+            if not isinstance(swing_level, Decimal):
+                swing_level = Decimal(str(swing_level))
+            if side is OrderSide.BUY:
+                new_sl = max(stop.sl, swing_level)
+            else:
+                new_sl = min(stop.sl, swing_level)
+        return StopProtection(
+            sl=new_sl,
+            trail=stop.trail,
+            trail_distance=stop.trail_distance,
+            activation_after_r=stop.activation_after_r,
+        )
+
+    def _emit_stop_update(
+        self,
+        instrument: str,
+        side: OrderSide,
+        new_stop: Decimal,
+        old_stop: Decimal | None = None,
+    ) -> None:
+        """Build a StopUpdate and dispatch it to on_stop_update."""
+        self.on_stop_update(
+            StopUpdate(
+                instrument=instrument,
+                side=side,
+                new_stop=new_stop,
+                old_stop=old_stop,
+            )
+        )
 
     @property
     def indicators(self) -> IndicatorRegistry:

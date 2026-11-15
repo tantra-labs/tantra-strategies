@@ -1,6 +1,6 @@
 # 0001 — Elephant Edge (EE+) Intraday Strategy
 
-**Status**: Proposed
+**Status**: Proposed — SDK prerequisite (gap 0006) shipped 2026-11-14 (see §7); the full EE+ strategy itself remains the future slice of this plan
 **Target Scope**: `tantra_strategies` (strategy module + SDK additions)
 **Upstream Dependencies**: `tantra-core` (plan 0003 / gap 0002 — level-map &
 stop-protection domain types), `tantra-market` (gap 0005 — Elephant/OI/OB
@@ -36,18 +36,21 @@ everywhere, tests in `tests/` parallel to `src/` (TDD, Red-Green-Refactor).
 
 - SDK `Strategy` exposes `buy`/`sell`/`submit`/`position`/`current_price`,
   `IndicatorRegistry` (SMA/EMA/RSI/ATR/Bollinger), `Parameter`, and the
-  `SimulatedContext` harness. **No `stop_loss()` helper, no trailing-stop
-  primitive, no options/level-map data surface on `StrategyContext`** — the
-  SDK additions below are the strategy's hard prerequisite (see gap 0006).
+  `SimulatedContext` harness. **Gap 0006 shipped 2026-11-14**: `stop_loss()` /
+  `trail_stop()` helpers, `StopProtection`/`StopUpdate`/`TrailMode`, and a
+  level-map/options context surface (`StrategyContext.level_map()` /
+  `options_snapshot()`) with seedable `SimulatedContext` stores — the SDK
+  prerequisites below are in place; the EE+ strategy module is the next slice.
 - `on_tick` is dispatched via `Strategy.run_ticks` / `SimulatedContext.run_ticks`
   (gap 0001 closed) — EE+ runs on `on_bar` (1-minute) plus a snapshot-based
   `on_levels`/options pull at the open, and could add tick-level entry checks
-  once the level/options context surface ships (gap 0006).
-- `StrategyContext` is a 3-method protocol (`submit`, `current_price`,
-  `position`) — EE+ needs a **level/options-aware context** (gap 0006) with
-  honest degradation to `NotImplementedError`/`unavailable` until the upstream
-  data gaps close, mirroring the seedable-adapter pattern used across the
-  workspace.
+  on the shipped level/options context surface (gap 0006).
+- `StrategyContext` (gap 0006) now adds `level_map()` and
+  `options_snapshot(instrument, expiry)` protocol methods with honest
+  `LevelsUnavailable` / `OptionsUnavailable` degradation (citing `tantra-market`
+  gap 0005 / `tantra-data` gap 0016); `SimulatedContext` carries seedable
+  level/OI stores and `LiveContext` degrades honestly until the upstream data
+  gaps close, mirroring the seedable-adapter pattern used across the workspace.
 
 ## 2. Level Map
 
@@ -173,21 +176,32 @@ Every signal attaches a `StopProtection` (SDK primitive, gap 0006):
 | `body_ratio_breakout` | `0.6` | 0.5 | 0.9 | 0.05 |
 | `alternate_mode` | `False` | — | — | — |
 
-## 7. SDK Additions (gap 0006)
+## 7. SDK Additions (gap 0006) — SHIPPED 2026-11-14
+
+All items below landed with gap 0006 closed (see the Closed table in
+`docs/gaps/README.md`):
 
 - `StopProtection` value object (`sdk/stop_protection.py`) with `sl`,
-  `trail`, `trail_distance`, `activation_after_r`; exact `Decimal`;
-  self-validating (`sl` never inside the band, `trail_distance ≥ 0`).
-- `Level`, `LevelMap`, `StrategySignal`, `PositionIntent` domain models in
-  `sdk/levels.py` (mirroring `tantra-core` plan 0003 types 1:1).
-- `Strategy.stop_loss(level_band, buffer_atr)` and `Strategy.trail_stop(...)`
-  helpers returning `StopProtection`/emitting `StopUpdate` — the helper that
-  `code-sdk.md` documents as deliberately dropped now returns because EE+
-  defines its exact semantics.
+  `trail` (`TrailMode`: off/atr/swing), `trail_distance`,
+  `activation_after_r`; exact `Decimal`; self-validating (`sl > 0`,
+  `trail_distance ≥ 0`, `activation_after_r ≥ 0`) with a `to_dict()`;
+  `StopUpdate` event model ships alongside.
+- `Level`, `LevelMap`, `StrategySignal`, `PositionIntent`, `OptionLeg`,
+  `OptionsSnapshot` domain models in `sdk/levels.py` (mirroring
+  `tantra-core` plan 0003 types 1:1), with `Level.band()` /
+  `LevelMap.overlapping()` filtering and `OptionsSnapshot` max-pain / OI-wall
+  helpers.
+- `Strategy.stop_loss(side, level_band, buffer_atr)` and
+  `Strategy.trail_stop(...)` helpers returning `StopProtection` /
+  emitting `StopUpdate`, plus the `on_stop_update` lifecycle hook.
 - `StrategyContext` extension: `level_map()` and
   `options_snapshot(instrument, expiry)` protocol methods (honest
-  `unavailable` until `tantra-core`/`tantra-market`/`tantra-data` gaps close);
-  `SimulatedContext` gains seedable level/OI stores for tests.
+  `LevelsUnavailable` / `OptionsUnavailable` degradation citing
+  `tantra-market` gap 0005 / `tantra-data` gap 0016); `SimulatedContext`
+  gains seedable level/OI stores for tests; `LiveContext` degrades honestly.
+- Tests: `tests/sdk/test_stop_protection.py`, `tests/sdk/test_levels.py`,
+  `tests/sdk/test_options_context.py`, and golden vectors
+  `tests/golden/stop_trail_golden.json`.
 
 ## 8. TDD Plan (`tests/`)
 
@@ -220,4 +234,4 @@ Every signal attaches a `StopProtection` (SDK primitive, gap 0006):
 - Research: [`docs/research/elephant-edge-strategy.md`](../../../docs/research/elephant-edge-strategy.md) (level map, OI walls, GEX layers)
 - Root master: [`docs/plans/0005-elephant-edge-strategy-platform.md`](../../../docs/plans/0005-elephant-edge-strategy-platform.md)
 - SDK reference: [`docs/design/code-sdk.md`](../design/code-sdk.md)
-- Gap 0006 (SDK prerequisites): [`docs/gaps/0006-strategy-sdk-stop-protection-and-options-context.md`](../gaps/0006-strategy-sdk-stop-protection-and-options-context.md)
+- Gap 0006 (SDK prerequisites, CLOSED 2026-11-14): see the Closed table in [`docs/gaps/README.md`](../gaps/README.md)

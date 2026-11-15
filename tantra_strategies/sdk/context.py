@@ -7,6 +7,7 @@ from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
 from tantra_strategies.sdk.bar import Bar
+from tantra_strategies.sdk.levels import LevelMap, OptionsSnapshot
 from tantra_strategies.sdk.order import (
     OrderEvent,
     OrderRequest,
@@ -16,13 +17,28 @@ from tantra_strategies.sdk.order import (
 from tantra_strategies.sdk.tick import Tick
 
 
+class LevelsUnavailable(RuntimeError):
+    """Level-map data unavailable. Upstream: tantra-core plan 0003 / tantra-market gap 0005."""
+
+
+class OptionsUnavailable(RuntimeError):
+    """Option-chain snapshot unavailable. Upstream: tantra-data gap 0016."""
+
+
 @runtime_checkable
 class StrategyContext(Protocol):
-    """The execution environment a strategy runs against (sim or live)."""
+    """The execution environment a strategy runs against (sim or live).
+
+    Level-map and options-context surfaces degrade honestly: sim contexts are
+    seedable; live contexts raise ``LevelsUnavailable`` / ``OptionsUnavailable``
+    when no feed is wired.
+    """
 
     def submit(self, request: OrderRequest) -> OrderEvent: ...
     def current_price(self, instrument: str) -> Decimal: ...
     def position(self, instrument: str) -> Decimal: ...
+    def level_map(self) -> LevelMap: ...
+    def options_snapshot(self, instrument: str, expiry: str | None = None) -> OptionsSnapshot: ...
 
 
 class SimulatedContext:
@@ -41,6 +57,8 @@ class SimulatedContext:
         self._resting: list[tuple[str, OrderRequest]] = []
         self._outbox: list[OrderEvent] = []
         self._counter = 0
+        self._level_map: LevelMap | None = None
+        self._options: dict[tuple[str, str | None], OptionsSnapshot] = {}
         self.events: list[OrderEvent] = []
         self.orders: list[OrderRequest] = []
         self.logger = logger or logging.getLogger("tantra.strategy")
@@ -64,6 +82,30 @@ class SimulatedContext:
 
     def position(self, instrument: str) -> Decimal:
         return self._positions.get(instrument, Decimal(0))
+
+    def seed_level_map(self, level_map: LevelMap) -> None:
+        """Seed the level map the strategy will see via ``level_map()``."""
+        self._level_map = level_map
+
+    def seed_options(self, snapshot: OptionsSnapshot) -> None:
+        """Seed an options snapshot, keyed by (instrument, expiry)."""
+        self._options[(snapshot.instrument, snapshot.expiry)] = snapshot
+
+    def level_map(self) -> LevelMap:
+        if self._level_map is None:
+            raise LevelsUnavailable(
+                "no level map seeded; indicator feeds tracked by tantra-market/docs/gaps/0005"
+            )
+        return self._level_map
+
+    def options_snapshot(self, instrument: str, expiry: str | None = None) -> OptionsSnapshot:
+        snapshot = self._options.get((instrument, expiry))
+        if snapshot is None:
+            raise OptionsUnavailable(
+                f"no options snapshot for {instrument} expiry={expiry}; "
+                "tracked by tantra-data/docs/gaps/0016"
+            )
+        return snapshot
 
     def submit(self, request: OrderRequest) -> OrderEvent:
         self._counter += 1

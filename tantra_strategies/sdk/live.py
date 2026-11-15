@@ -12,6 +12,8 @@ from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
 from tantra_strategies.sdk.bar import Bar
+from tantra_strategies.sdk.context import LevelsUnavailable, OptionsUnavailable
+from tantra_strategies.sdk.levels import LevelMap, OptionsSnapshot
 from tantra_strategies.sdk.order import (
     OrderEvent,
     OrderRequest,
@@ -76,6 +78,15 @@ class LiveContext:
 
     def position(self, instrument: str) -> Decimal:
         return self._positions.get(instrument, Decimal(0))
+
+    def level_map(self) -> LevelMap:
+        raise LevelsUnavailable("no level feed wired; tracked by tantra-market/docs/gaps/0005")
+
+    def options_snapshot(self, instrument: str, expiry: str | None = None) -> OptionsSnapshot:
+        raise OptionsUnavailable(
+            f"no options feed wired for {instrument} expiry={expiry}; "
+            "tracked by tantra-data/docs/gaps/0016"
+        )
 
     def submit(self, request: OrderRequest) -> OrderEvent:
         self.orders.append(request)
