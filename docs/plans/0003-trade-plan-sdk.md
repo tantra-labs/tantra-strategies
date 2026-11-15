@@ -4,37 +4,40 @@
 
 ## 0. Executive Summary & Objective
 
-Give strategy authors one call to turn a signal into a sized, protected plan and a hook to react to managed stop/target actions:
-`Strategy.plan_trade(signal, preset="atr_swing", **overrides) -> TradePlan`. Presets live in TOML. Roadmap: [root plan 0008](../../../docs/plans/0008-trade-signal-generator.md).
-Closes the SDK items of Qullamaggie gap row 22 (root plan 0006): partial_exit, close-based trailing, `equity()`.
+Give strategy authors one call to turn a signal or `ChartPattern` into a sized, protected plan and a hook to react to managed stop/target actions:
+`Strategy.plan_trade(signal, preset="atr_swing", **overrides) -> TradePlan`. Canonical presets live in `tantra-core` and are exposed via `tantra.trade_plan` (zero duplicated TOMLs).
+Roadmap: [root plan 0008](../../../docs/plans/0008-trade-signal-generator.md).
+Closes the SDK items of Qullamaggie gap row 22 (root plan 0006): `partial_exit`, close-based trailing, `equity()`.
 
 ## 1. Context & Gaps Covered
 
 - `sdk/stop_protection.py`: `TrailMode{OFF, ATR, SWING}`, `StopProtection(... activation_after_r)` — activation is never enforced; `StopUpdate`.
-- `sdk/strategy.py`: `stop_loss(side, level_band, buffer_atr)` is level-band only; `trail_stop(...)` never widens; `_emit_stop_update` has no external caller; only buy/sell market/limit.
-- `sdk/order.py`: `OrderRequest` has no trigger price. `sdk/levels.py`: `PositionIntent` has a single target.
-- No `ctx.equity()`, no partial-exit intent. Related: plan [0001](0001-elephant-edge-strategy.md), plan [0002](0002-universe-screen-context.md), gap `../gaps/0006-strategy-sdk-stop-protection-and-options-context.md`.
-- Upstream: `tantra-core/docs/plans/0005-trade-planner-and-manager.md`, `tantra-ffi/docs/plans/0002-trade-planner-bindings.md`, `tantra-market/docs/gaps/0007-adr-pct-and-chandelier-exit.md`.
+- `sdk/strategy.py`: `stop_loss(side, level_band, buffer_atr)` is level-band only; `trail_stop(...)` never widens; `_emit_stop_update` has no external caller; only buy/sell market/limit. Also overlaps with `tantra.declarative.DeclarativeStrategy` in `tantra-ffi` (reconciled in `tantra-ffi` plan 0002 P4).
+- `sdk/order.py`: `OrderRequest` has no trigger price (`StopAbove`/`StopBelow`). `sdk/levels.py`: `PositionIntent` has a single target.
+- No `ctx.equity()`, no partial-exit intent, no `ChartPattern` helper. Related: plan [0001](0001-elephant-edge-strategy.md), plan [0002](0002-universe-screen-context.md), gap `../gaps/0006-strategy-sdk-stop-protection-and-options-context.md`.
+- Upstream: `tantra-core/docs/plans/0005-trade-planner-and-manager.md`, `tantra-market/docs/plans/0002-chart-pattern-analyzer.md`, `tantra-ffi/docs/plans/0002-trade-planner-bindings.md`, `tantra-market/docs/gaps/0007-adr-pct-and-chandelier-exit.md`.
 
 ## 2. Component Specifications & Phases
 
-- **P1**: `ctx.equity()` (Decimal); `OrderRequest.trigger_price`; `partial_exit(...)` intent; `on_trade_action(action)` hook, routed via `_emit_stop_update`.
-- **P2**: `Strategy.plan_trade` over `tantra.trade_plan`; enforce `activation_after_r`; `CloseBelowMa` trail evaluated on daily close.
-- **P3**: migrate `StopProtection`, `trail_stop`, `PositionIntent` onto core types with thin compat shims (deprecated).
-- **P4 Presets**: `catalog/plan/{qullamaggie,ee_plus,atr_swing}.toml` (versioned, all fields overridable); sizing reuses `catalog/size/fixed_fractional.toml`
-  -> `tantra_strategies.strategies.sizing:FixedFractional`.
-- **P5**: `SimulatedContext` drives `TradeManager` per bar so backtests match live; example strategies in `tantra-examples` as follow-up (not in this plan).
-- SDK keeps depending only on `tantra` FFI + pydantic; Decimal only.
+- **P1**: `ctx.equity()` (`Decimal` mark-to-market equity, currency-aware); `OrderRequest.trigger_price`; `partial_exit(...)` intent; `on_trade_action(action)` hook routed via `_emit_stop_update`.
+- **P2**: `Strategy.plan_trade(signal_or_pattern, preset=..., **overrides)` over `tantra.trade_plan` (supports `Signal`, `StrategySignal`, and `ChartPattern` for `pattern_breakout`); enforce `activation_after_r`; `CloseMa` trail evaluated strictly via `on_session_close` on daily close.
+- **P3**: Migrate `StopProtection`, `trail_stop`, `PositionIntent` onto `tantra.trade_plan` core types with thin deprecated compat shims (aligning with `tantra-ffi` plan 0002 P4 so SDK and `declarative.py` share one protection/action path).
+- **P4 Canonical Presets**: Consume canonical `{qullamaggie, ee_plus, atr_swing, pattern_breakout}` specs from `tantra.trade_plan` (`tantra-core` SSOT) — do **not** maintain a separate drifting TOML copy in `catalog/plan/`; SDK sizing wrappers delegate to core `RiskBudget`/`SizingSpec` (while preserving `catalog/size/fixed_fractional.toml` compatibility).
+- **P5**: `SimulatedContext` delegates directly to the PyO3 Rust `TradeManager` (`on_entry_fill`, `on_bar`, `on_session_close`) so Python backtests match Rust backtest/live byte-for-byte; example strategies belong in `tantra-examples` as follow-up.
+- SDK keeps depending only on `tantra` FFI + pydantic; `Decimal` only (zero floats).
 
 ## 3. Test Plan (TDD)
 
-`tests/` only: preset TOML load/validation tests; per-preset golden plans (shared vectors with core); `activation_after_r` enforcement;
-partial-exit/trail flow in `SimulatedContext`; compat-shim regression tests; `ruff`, `mypy --strict`, `pytest -v`.
+`tests/` only:
+- Preset load & override validation tests verifying SDK preset defaults equal `tantra.trade_plan` canonical presets byte-for-byte;
+- Per-preset golden plans (shared vectors with core, including `pattern_breakout` and VCP `measured_target=None` fallback);
+- `activation_after_r` enforcement, `on_entry_fill` R-re-anchoring, and `on_session_close` `CloseMa` tests in `SimulatedContext`;
+- Compat-shim regression tests; `ruff`, `mypy --strict`, `pytest -v`.
 
 ## 4. Dependencies & Tier Notes
 
-L6 -> L4 only. Blocked on ffi plan 0002 and market gap 0007 (indicator inputs; interim: strategy computes ADR%/chandelier locally with a citation comment to the gap).
+L6 → L4 only. Blocked on `tantra-ffi` plan `0002`, `tantra-market` gap `0007`, and `tantra-market` plan `0002` (interim: strategy computes ADR%/Chandelier locally only with an explicit citation comment to gap `0007`).
 
-## 5. Open Questions
+## 5. Decisions Locked (Previously Open)
 
-- Should preset TOMLs be the single source (read by Rust too) or mirrored from core?
+- **Preset SSOT**: `tantra-core` embeds and validates the canonical TOML presets and `tantra-ffi` exports them (`TradePlanSpec.from_preset(...)`); `tantra-strategies` loads from FFI rather than keeping a duplicate copy.
