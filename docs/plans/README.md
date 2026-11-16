@@ -15,7 +15,7 @@ and open gaps in [`docs/gaps/README.md`](../gaps/README.md).
 | # | Title | Target Scope | Status |
 |---|-------|--------------|--------|
 | [0001](0001-elephant-edge-strategy.md) | Elephant Edge (EE+) Intraday Strategy — level map, buy/sell signals, SL/TSL, positioning (with Order Blocks & OI/gamma confluence) | `tantra-strategies` (+ SDK additions in gap 0006) | Proposed — tracks gap 0006; master plan root `docs/plans/0005` |
-| [0002](0002-universe-screen-context.md) | Universe, Classification & Screen Context for Strategies (`StrategyContext.universe/classification/screen`, `on_rebalance`) | `tantra-strategies` SDK | Proposed — research `docs/research/trendlyne-screener-alerts-mcp.md`; root plan `docs/plans/0007` (F6) |
+| [0002](0002-universe-screen-context.md) | Universe, Classification & Screen Context for Strategies (`StrategyContext.universe/classification/screen`, `on_rebalance`) | `tantra-strategies` SDK | Proposed — research `docs/research/trendlyne-screener-alerts-mcp.md`; root plan `docs/plans/0010` (F6) |
 | [0003](0003-trade-plan-sdk.md) | Trade Plan SDK (`plan_trade`, `on_trade_action`, `partial_exit`, preset TOMLs) | `tantra-strategies` SDK | Proposed — root plan `docs/plans/0008` |
 
 ## Open Gaps (un-grouped)

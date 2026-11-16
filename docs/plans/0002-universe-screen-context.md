@@ -10,7 +10,7 @@ strategies need no ad-hoc data access. The SDK defines Protocols only; a tantra-
 lives in the composition layer.
 
 References: research [`trendlyne-screener-alerts-mcp.md`](../../../docs/research/trendlyne-screener-alerts-mcp.md) (F6);
-root roadmap [`0007`](../../../docs/plans/0007-screener-taxonomy-and-alerts.md).
+root roadmap [`0010`](../../../docs/plans/0010-screener-taxonomy-and-alerts.md).
 Depends on: [tantra-core 0004](../../../tantra-core/docs/plans/0004-classification-and-alert-wire-types.md),
 [tantra-data 0007](../../../tantra-data/docs/plans/0007-instrument-master-index-membership.md),
 [tantra-data 0008](../../../tantra-data/docs/plans/0008-screen-dsl-catalog-qvm.md).
