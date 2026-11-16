@@ -1,0 +1,24 @@
+# Declarative-only step manifest: no runnable strategy class yet.
+# See docs/gaps/0007-signal-step-manifests-declarative-only.md.
+schema = 1
+id = "signal.alpha30_factor"
+kind = "signal"
+title = "Alpha30 factor"
+description = "Per-symbol factor signal over the NIFTY 200 Alpha 30 universe; emits target orders rather than a candidate list, so it cannot feed a sizer."
+tags = ["alpha30", "signal", "factor"]
+version = "1.0.0"
+strategy_api_version = "1.0.0"
+
+[params]
+
+[requires]
+
+[consumes]
+shape = "universe"
+columns = ["symbol"]
+
+[emits]
+shape = "orders"
+adds = []
+report = []
+reportable = []

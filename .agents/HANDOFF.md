@@ -1,6 +1,30 @@
 # `tantra-strategies` — Inter-Agent Handoff
 
 ## Latest Batch
+* **Cross-repo catalog gap closed (2026-11-16)**: tantra-examples' chain runner
+  could not find this repo as a catalog (no `registry.json`) and skipped 28
+  pipeline tests. Added:
+  - `registry.json` at the catalog root (the harness loader's catalog marker;
+    registers the declarative `signal.alpha30_factor` step manifest).
+  - `tools/validate_chain.py` — `schema_errors(manifest)` (structural checks on
+    the pipeline `describe()`/`step.toml` shape) + `validate_chain(manifests)`
+    (chain semantics: kind order screen→filter→signal→size→risk→execute,
+    shape/column handoff, `with` params vs type/min/max/choices/pattern,
+    `report` vs `emits.reportable`). Loaded by tantra-examples via
+    `load_catalog_tool("validate_chain")`.
+  - `catalog_steps/signal/alpha30_factor/step.toml` — declarative-only `signal`
+    step (consumes `universe`, emits `orders`); no runnable strategy class yet
+    (gap 0007).
+  - Gap doc `docs/gaps/0007-signal-step-manifests-declarative-only.md` + index
+    (also records the follow-on: enabling the catalog unskips the examples
+    integration tests 06/07/run_chain, which then fail on missing *runnable*
+    catalog strategies / 1D NSE data — fix belongs to `tantra-strategies` +
+    `tantra-data`, not the validator).
+  - Gates: `tantra-examples` `test_pipeline_chain.py` +
+    `test_pipeline_manifests.py` fully green (44 collected); this repo's pytest
+    green (181, exit 0); `ruff check` + `ruff format --check` clean.
+
+## Phase / Slice Status
 * **Gap 0006 / plan 0001 §7 SHIPPED (2026-11-14)**: SDK stop-protection +
   level-map/options context surface — new `sdk/stop_protection.py`
   (`StopProtection`, `StopUpdate`, `TrailMode`) and `sdk/levels.py`

@@ -13,7 +13,9 @@ the remaining future work is enumerated below.
 
 ## Open Gaps
 
-None.
+| # | Title | Plan |
+|---|-------|------|
+| [0007](0007-signal-step-manifests-declarative-only.md) | Signal step manifests (`signal.alpha30_factor`) are declarative-only — the chain validator and examples runner validate them but no runnable strategy class exists | — |
 
 ## Closed Gaps
 
