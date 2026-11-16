@@ -57,7 +57,7 @@ In `tests/`: `test_context_universe.py` (runtime_checkable conformance, unwired 
 ## 4. Dependencies & Tier Notes
 
 L6; no new dependencies. Never `isinstance(ctx, SimulatedContext)`; add capability methods on the
-Protocol. Consumed by [tantra-examples 0003](../../../tantra-examples/docs/plans/0003-categorized-examples.md).
+Protocol. Consumed by [tantra-examples 0005](../../../tantra-examples/docs/plans/0005-categorized-examples.md).
 
 ## 5. Open Questions
 
