@@ -3,6 +3,7 @@ Mean Reversion, Turtle, Risk Parity) and execution slicers."""
 
 from tantra_strategies.strategies.arbitrage import CashFuturesArbitrage
 from tantra_strategies.strategies.composite_signal import CompositeSignalStrategy
+from tantra_strategies.strategies.elephant_edge import ElephantEdgeStrategy
 from tantra_strategies.strategies.execution import TWAPSlicer, VWAPSlicer
 from tantra_strategies.strategies.market_making import MarketMakingStrategy
 from tantra_strategies.strategies.mean_reversion import BollingerMeanReversion
@@ -17,6 +18,7 @@ __all__ = [
     "CashFuturesArbitrage",
     "CompositeSignalStrategy",
     "CoveredCallWriter",
+    "ElephantEdgeStrategy",
     "FixedFractional",
     "MarketMakingStrategy",
     "QuotingStrategy",
