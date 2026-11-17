@@ -14,7 +14,6 @@ and open gaps in [`docs/gaps/README.md`](../gaps/README.md).
 
 | # | Title | Target Scope | Status |
 |---|-------|--------------|--------|
-| [0001](0001-elephant-edge-strategy.md) | Elephant Edge (EE+) Intraday Strategy — level map, buy/sell signals, SL/TSL, positioning (with Order Blocks & OI/gamma confluence) | `tantra-strategies` (gap 0006 closed) | Proposed — master plan root `docs/plans/0005` |
 | [0002](0002-universe-screen-context.md) | Universe, Classification & Screen Context for Strategies (`StrategyContext.universe/classification/screen`, `on_rebalance`) | `tantra-strategies` SDK | Proposed — research `docs/research/trendlyne-screener-alerts-mcp.md`; root plan `docs/plans/0010` (F6) |
 | [0003](0003-trade-plan-sdk.md) | Trade Plan SDK (`plan_trade`, `on_trade_action`, `partial_exit`, preset TOMLs) | `tantra-strategies` SDK | Proposed — root plan `docs/plans/0008` |
 
@@ -22,4 +21,5 @@ and open gaps in [`docs/gaps/README.md`](../gaps/README.md).
 
 | # | Title | Target Scope | Implemented In |
 |---|-------|--------------|----------------|
+| 0001 (EE+) | Elephant Edge (EE+) Intraday Strategy — level map, buy/sell signals, SL/TSL, positioning (with Order Blocks & OI/gamma confluence) | `tantra-strategies/strategies/elephant_edge.py` | Closed 2026-11-17 (T12.4, `adcb8d9`): `ElephantEdgeStrategy` with declarative `Parameter`s — session level-map (`_build_level_map` + price-action fallback), 0–4 confluence scoring (OI walls / PDH-PDL / gamma / OB / mid-month gate), signal generation (`SignalKind` Breakout/Reversal/Retest + Plus-Two confirmation + ΔOI trap gate), SL/TSL/R-multiple management (3R partial + breakeven, 5R runner, 6-candle time-stop, ATR/swing trail → `StopUpdate`s), `PositionIntent` positioning (lot rounding, caps, alternate mode), square-off. Tests `tests/strategies/test_elephant_edge_{levels,signals,stops,positioning}.py` (35) + `tests/integration/test_elephant_edge_sim.py`; full suite 218 passed. SDK prerequisite (gap 0006) shipped 2026-11-14. |
 | 0001 | Versioned Strategy Manifests & Basket Strategies | `tantra-strategies` | Implemented in commit `207a70c` (`StrategyManifest`, `BasketManifest`, promotion workflow) |
