@@ -1,0 +1,20 @@
+name = "equal_weight"
+title = "Equal Weight"
+family = "portfolio"
+version = "1.0.0"
+strategy = "tantra_strategies.strategies.equal_weight:EqualWeight"
+
+[params.instruments]
+default = "NSE:NIFTY50-INDEX"
+
+[params.rebalance_period]
+default = 5
+min = 1
+max = 252
+step = 1
+
+[params.capital]
+default = 1000000
+min = 1
+max = 10000000000
+step = 1

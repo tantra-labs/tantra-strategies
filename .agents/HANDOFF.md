@@ -1,9 +1,28 @@
 # `tantra-strategies` — Inter-Agent Handoff
 
 ## Latest Batch
-* **Cross-repo catalog gap closed (2026-11-16)**: tantra-examples' chain runner
-  could not find this repo as a catalog (no `registry.json`) and skipped 28
-  pipeline tests. Added:
+* **Gap 0007 closed (2026-11-17)**: `signal.alpha30_factor` is now runnable, not
+  just declarative. Added:
+  - Runnable SDK strategies `EqualWeight` (`strategies/equal_weight.py`) and
+    `Alpha30Factor` (`strategies/alpha30.py`) with declarative `Parameter`s and
+    exact `Decimal` math, registered in `strategies/__init__.py` and the top-level
+    package.
+  - Catalog manifest `catalog/portfolio/equal_weight.toml` (family `portfolio`);
+    `catalog/` now 11 manifests (11/11 via `tools/validate_catalog.py`).
+  - Harness-loader layout (what `tantra-examples` `load_named` resolves): wheel
+    `strategy.py` + `config.toml` + `step.toml` in
+    `catalog_steps/portfolio/equal_weight/` and
+    `catalog_steps/signal/alpha30_factor/`, both registered in `registry.json`.
+  - Tests: `tests/strategies/test_equal_weight.py`, `test_alpha30.py`,
+    `tests/integration/test_catalog_runnable.py` (+ `basket_bars` helper in
+    `tests/conftest.py`). Suite 218 -> 245 green.
+  - Un-skips tantra-examples `test_07_alpha30_backtest.py` (6 skipped -> 6
+    passed; the un-skip surfaced two examples-side money bugs — `capital_minor`
+    major/minor units in `examples/universes/07_alpha30_backtest.py` and the
+    `fees_minor` paisa-consistency projection in `tantra_examples/backtest.py` —
+    both fixed in the tantra-examples checkout, committed locally there).
+  - `test_run_chain.py` stays honestly skipped on the absent 1D NSE Parquet
+    catalog (no data fabrication).
   - `registry.json` at the catalog root (the harness loader's catalog marker;
     registers the declarative `signal.alpha30_factor` step manifest).
   - `tools/validate_chain.py` — `schema_errors(manifest)` (structural checks on

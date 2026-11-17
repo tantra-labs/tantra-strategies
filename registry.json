@@ -1,10 +1,15 @@
 {
-  "note": "Catalog root marker for the tantra-examples harness loader: find_catalog() accepts this directory as the tantra-strategies catalog because registry.json exists here. The strategies list registers the step manifests the chain validator knows (step.toml files); the declarative signal step has no runnable strategy class yet and is validated but not runnable in the examples pipeline.",
+  "note": "Catalog root marker for the tantra-examples harness loader: find_catalog() accepts this directory as the tantra-strategies catalog because registry.json exists here. The strategies list registers step manifests (step.toml files) that are validated AND runnable: each path directory ships strategy.py + config.toml + step.toml so load_named(name) and the chain validator both work (gap 0007).",
   "strategies": [
     {
       "name": "alpha30_factor",
       "category": "signal",
       "path": "catalog_steps/signal/alpha30_factor"
+    },
+    {
+      "name": "equal_weight",
+      "category": "portfolio",
+      "path": "catalog_steps/portfolio/equal_weight"
     }
   ]
 }

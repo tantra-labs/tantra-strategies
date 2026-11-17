@@ -1,0 +1,10 @@
+name = "alpha30_factor"
+symbol = "NSE:NIFTY50-INDEX"
+exchange = "NSE"
+
+[params]
+universe = "nifty200_alpha_30"
+lookback = 30
+top_n = 10
+rebalance_period = 5
+capital = 1000000

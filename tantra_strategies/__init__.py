@@ -53,9 +53,11 @@ from tantra_strategies.sdk import (
     TimeInForce,
     TrailMode,
 )
+from tantra_strategies.strategies.alpha30 import Alpha30Factor
 from tantra_strategies.strategies.arbitrage import CashFuturesArbitrage
 from tantra_strategies.strategies.composite_signal import CompositeSignalStrategy
 from tantra_strategies.strategies.elephant_edge import ElephantEdgeStrategy
+from tantra_strategies.strategies.equal_weight import EqualWeight
 from tantra_strategies.strategies.execution import TWAPSlicer, VWAPSlicer
 from tantra_strategies.strategies.market_making import MarketMakingStrategy
 from tantra_strategies.strategies.mean_reversion import BollingerMeanReversion
@@ -69,6 +71,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "VYAAPAAR_AVAILABLE",
+    "Alpha30Factor",
     "Bar",
     "BasketManifest",
     "BasketRunResult",
@@ -78,6 +81,7 @@ __all__ = [
     "CompositeSignalStrategy",
     "CoveredCallWriter",
     "ElephantEdgeStrategy",
+    "EqualWeight",
     "ExecutionGateway",
     "FixedFractional",
     "InstrumentSelector",

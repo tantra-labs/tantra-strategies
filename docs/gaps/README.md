@@ -15,12 +15,13 @@ the remaining future work is enumerated below.
 
 | # | Title | Plan |
 |---|-------|------|
-| [0007](0007-signal-step-manifests-declarative-only.md) | Signal step manifests (`signal.alpha30_factor`) are declarative-only — the chain validator and examples runner validate them but no runnable strategy class exists | — |
+| _none_ | — | — |
 
 ## Closed Gaps
 
 | # | Title | Closed In |
 |---|-------|-----------|
+| 0007 | `signal.alpha30_factor` step manifest is declarative-only (validated, not runnable) — runnable catalog strategies `equal_weight` + `alpha30_factor` (SDK `Strategy` subclasses + harness-loader `strategy.py`/`config.toml`/`step.toml` in the loader layout, registered in `registry.json`); un-skips tantra-examples `test_07_alpha30_backtest.py` (T17.6) | 2026-11-17 |
 | 0001 | `Strategy.on_tick` declared but never dispatched — `Tick` model + `Strategy.run_ticks` / `SimulatedContext.run_ticks` / `LiveContext.run_ticks` dispatch (T8.1) | 2026-11-14 |
 | 0002 | No live/feed-backed `StrategyContext` in-repo (only `SimulatedContext`) — `LiveContext` + `MarketDataFeed`/`ExecutionGateway` seams in `sdk/live.py`, sim/live parity tests (T8.2) | 2026-11-14 |
 | 0003 | Catalog `step.toml` is declarative-only — in-repo executor `tools/run_step.py` proves every step runs deterministically on `SimulatedContext` (T8.3) | 2026-11-14 |

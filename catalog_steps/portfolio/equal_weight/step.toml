@@ -1,0 +1,26 @@
+# Equal-weight portfolio sizing step, runnable via the catalog strategy at
+# catalog_steps/portfolio/equal_weight (strategy.py + config.toml). The examples
+# pipeline chain runner also knows `size.equal_weight` natively (its own sizer);
+# the catalog copy is what `load_named("equal_weight")` executes on the backtester.
+schema = 1
+id = "size.equal_weight"
+kind = "size"
+title = "Equal weight"
+description = "Equal 1/N portfolio weights over the strategy universe; runnable via the equal_weight catalog strategy (catalog_steps/portfolio/equal_weight)."
+tags = ["equal_weight", "portfolio", "size"]
+version = "1.0.0"
+strategy_api_version = "1.0.0"
+
+[params]
+
+[requires]
+
+[consumes]
+shape = "candidates"
+columns = ["symbol"]
+
+[emits]
+shape = "weights"
+adds = []
+report = []
+reportable = []
