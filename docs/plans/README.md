@@ -16,6 +16,7 @@ and open gaps in [`docs/gaps/README.md`](../gaps/README.md).
 |---|-------|--------------|--------|
 | [0002](0002-universe-screen-context.md) | Universe, Classification & Screen Context for Strategies (`StrategyContext.universe/classification/screen`, `on_rebalance`) | `tantra-strategies` SDK | Proposed — research `docs/research/trendlyne-screener-alerts-mcp.md`; root plan `docs/plans/0010` (F6) |
 | [0003](0003-trade-plan-sdk.md) | Trade Plan SDK (`plan_trade`, `on_trade_action`, `partial_exit`, preset TOMLs) | `tantra-strategies` SDK | Proposed — root plan `docs/plans/0008` |
+| [0004](0004-fire-cashflow-theta-and-compounding-templates.md) | FIRE Acceleration Strategy Templates (Stage-2 Compounding Basket + Automated Theta Cashflow + Empirical Yield Bridge) | `manifests/`, `tantra_strategies/planning/` | Proposed (2026-11-18) — Track **T19.7**; root plan `docs/plans/0013`; depends on `tantra-ledger` 0006 + `tantra-ffi` 0005 |
 
 ## Implemented Plans
 
