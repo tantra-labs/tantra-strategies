@@ -3,6 +3,7 @@
 Family → Concept → Primitive → Indicator → Composite → Detector → Recipe.
 """
 
+from tantra_library.catalog import build_default_registry, default_registry
 from tantra_library.composites import (
     PredictiveRanges,
     PredictiveRangesValue,
@@ -138,6 +139,8 @@ __all__ = [
     "VolumeQuality",
     "ZoneBreakEvent",
     "ZoneTouchEvent",
+    "build_default_registry",
+    "default_registry",
     "median_price",
     "source_value",
     "typical_price",
