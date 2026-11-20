@@ -22,7 +22,10 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["tantra_strategies*"]
+include = ["tantra_strategies*", "tantra_library*"]
+
+[tool.setuptools.package-data]
+tantra_library = ["concepts/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
