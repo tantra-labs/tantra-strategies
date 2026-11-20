@@ -1,4 +1,4 @@
-# 0004 — Predictive Range Strategy Recipes
+# 0005 — Predictive Range Strategy Recipes
 
 **Status**: Proposed (2026-11-20) — design only. Parent: root plan 0016 (Track T22, phase T22.6).
 
