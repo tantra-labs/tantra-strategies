@@ -3,27 +3,34 @@ title = "Cash-Futures Arbitrage"
 family = "arbitrage"
 version = "1.0.0"
 strategy = "tantra_strategies.strategies.arbitrage:CashFuturesArbitrage"
+promotion_status = "draft"
 
-[params.cash_instrument]
+[parameters.cash_instrument]
 default = "NSE:RELIANCE-EQ"
 
-[params.futures_instrument]
+[parameters.futures_instrument]
 default = "NFO:RELIANCE24DECFUT"
 
-[params.entry_threshold]
+[parameters.entry_threshold]
 default = "0.50"
 min = "0.05"
 max = "50.00"
 step = "0.05"
 
-[params.exit_threshold]
+[parameters.exit_threshold]
 default = "0.10"
 min = "0.00"
 max = "50.00"
 step = "0.05"
 
-[params.quantity]
+[parameters.quantity]
 default = 10
 min = 1
 max = 1000
 step = 1
+
+[target_instruments]
+instruments = ["NSE:RELIANCE-EQ", "NFO:RELIANCE24DECFUT"]
+
+[capital_allocation]
+weight = 1.0

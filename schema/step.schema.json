@@ -1,51 +1,70 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://docs.tantra-labs.io/schema/step.schema.json",
-  "title": "Tantra step manifest",
-  "description": "Declarative step.toml manifest for the strategy catalog. Each manifest names a strategy class (module:Class) and its tunable parameters for visual-studio chaining and Rust StepManifest parsing.",
+  "title": "Tantra pipeline step manifest",
+  "description": "Declarative catalog_steps/<kind>/<name>/step.toml manifest for runnable pipeline steps (registered in registry.json; validated structurally by tools/validate_chain.py and parsed by tantra-runtime-strategy StepManifest). Versioned, promotable deployments use manifests/strategies/*.toml (strategy-manifest.schema.json) instead.",
   "type": "object",
-  "required": ["name", "title", "family", "version", "strategy", "params"],
+  "required": [
+    "schema",
+    "id",
+    "kind",
+    "title",
+    "description",
+    "tags",
+    "version",
+    "strategy_api_version",
+    "params",
+    "requires",
+    "consumes",
+    "emits"
+  ],
   "properties": {
-    "name": {
-      "type": "string",
-      "pattern": "^[a-z0-9_]+$"
-    },
-    "title": {
-      "type": "string"
-    },
-    "family": {
-      "type": "string",
-      "enum": [
-        "arbitrage",
-        "execution",
-        "market_making",
-        "mean_reversion",
-        "options",
-        "portfolio",
-        "size",
-        "trend"
-      ]
-    },
-    "version": {
-      "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
-    },
-    "strategy": {
-      "type": "string",
-      "pattern": "^tantra_strategies\\.[A-Za-z0-9_.]+:[A-Za-z_][A-Za-z0-9_]*$"
-    },
+    "schema": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^(screen|filter|signal|size|risk|execute)\\.[a-z0-9_]+$" },
+    "kind": { "type": "string", "enum": ["screen", "filter", "signal", "size", "risk", "execute"] },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "strategy_api_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "params": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["default"],
+        "required": ["type"],
         "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["int", "window", "float", "decimal", "bool", "str", "symbols", "date", "enum"],
+            "description": "Prefer 'decimal' (string default/bounds, floats rejected) for prices, ratios and multipliers; 'float' is kept only for legacy tantra-examples pipeline steps."
+          },
+          "description": { "type": "string" },
           "default": {},
           "min": {},
           "max": {},
-          "step": {}
+          "step": {},
+          "choices": { "type": "array" },
+          "pattern": { "type": "string" }
         },
         "additionalProperties": false
+      }
+    },
+    "requires": { "type": "object" },
+    "consumes": { "$ref": "#/definitions/io" },
+    "emits": { "$ref": "#/definitions/io" }
+  },
+  "definitions": {
+    "shape": { "type": "string", "enum": ["universe", "candidates", "weights", "orders", "result", "none"] },
+    "io": {
+      "type": "object",
+      "required": ["shape"],
+      "properties": {
+        "shape": {
+          "oneOf": [
+            { "$ref": "#/definitions/shape" },
+            { "type": "array", "items": { "$ref": "#/definitions/shape" }, "minItems": 1 }
+          ]
+        }
       }
     }
   },

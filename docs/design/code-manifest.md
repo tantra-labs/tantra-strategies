@@ -139,8 +139,7 @@ or the realized loss exceeds `max_loss`.
 | Tool | Checks |
 |------|--------|
 | `tools/validate_manifests.py` | Strategy manifests: JSON schema + pydantic model + `validate_parameters()` + `instantiate()`. Basket manifests: JSON schema + pydantic model + member name/version resolves to a strategy manifest. |
-| `tools/validate_catalog.py` | `catalog/**/*.toml` against `schema/step.schema.json` + strategy import/instantiate. |
-| `tools/run_step.py` | **Executes** every `catalog/**/*.toml` through `SimulatedContext` on a deterministic bar series, asserting no exception and run-to-run determinism (gap 0003). |
+| `tools/run_step.py` | **Executes** every `manifests/strategies/*.toml` through `SimulatedContext` on a deterministic bar series, asserting no exception and run-to-run determinism (gap 0003). |
 
 Schemas: `schema/strategy-manifest.schema.json`,
 `schema/basket-manifest.schema.json`, `schema/step.schema.json` (JSON Schema

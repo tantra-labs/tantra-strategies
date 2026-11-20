@@ -14,7 +14,7 @@ catalog of StockSharp-inspired strategies, and a declarative manifest layer
 ```
 tantra-strategies/
 ├── tantra_strategies/   # Zone 1: pure-Python SDK + strategies + manifest models
-├── catalog/              # Zone 2: declarative step.toml manifests (10 files, 8 families)
+├── catalog_steps/        # Zone 2: runnable pipeline steps (+ registry.json)
 ├── manifests/            # Zone 2: versioned strategy & basket sidecars (plan 0001)
 │   ├── strategies/       #   StrategyManifest TOML sidecars
 │   └── baskets/          #   BasketManifest TOML groupings
@@ -36,16 +36,14 @@ math uses `decimal.Decimal` (zero-floats policy).
 | `manifest/` | Pydantic models: `StrategyManifest`, `BasketManifest`, `ParameterSpec`, `InstrumentSelector`, `CapitalAllocation`, `MemberStrategyRef`, `RiskBudget`, `PromotionStatus`/`PromotionRecord` and the `promote()` workflow (plan 0001). |
 | `_compat.py` | Optional interop with the `tantra` native wheel; `VYAAPAAR_AVAILABLE` flag, `decimal.Decimal` fallback. |
 
-### Zone 2 — `catalog/` & `manifests/`
+### Zone 2 — `catalog_steps/` & `manifests/`
 
-- `catalog/*.toml` — declarative step manifests. Ten files across eight
-  families: `arbitrage/`, `execution/`, `market_making/`, `mean_reversion/`,
-  `options/`, `portfolio/`, `size/`, `trend/`. Each names `name`, `title`,
-  `family`, `version`, `strategy = module:Class`, and `[params.*]` defaults with
-  optional `min`/`max`/`step`.
-- `manifests/strategies/*.toml` — `StrategyManifest` sidecars (`turtle_breakout`,
-  `twap_slicer`) with parameter snapshots, target instruments, and a capital
-  allocation.
+- `catalog_steps/` + `registry.json` — runnable pipeline steps.
+- `manifests/strategies/*.toml` — versioned, promotable `StrategyManifest`
+  sidecars (11 files; the former `catalog/` step manifests were migrated here
+  on 2026-11-20). Each names `name`, optional `title`/`family` (one of eight
+  families), `version`, `strategy = module:Class`, `[parameters.*]` snapshots
+  (`min`/`max`/`step`), target instruments, and a capital allocation.
 - `manifests/baskets/*.toml` — `BasketManifest` groupings
   (`turtle_twap_basket`) under a combined capital and Phase-1 risk budget.
 
@@ -54,16 +52,13 @@ math uses `decimal.Decimal` (zero-floats policy).
 Tests live in `tests/` parallel to the package (never inlined into
 `tantra_strategies/`). Suites: `tests/sdk/` (indicators, parameters, strategy
 lifecycle), `tests/strategies/` (one file per strategy), `tests/manifests/`
-(manifest models, promotion, schema conformance), `tests/catalog/` (step.toml
-schema + strategy-class parity), `tests/test_init.py` (package export).
+(manifest models, promotion, schema conformance), `tests/test_init.py` (package export).
 
 ### Zone 4 — `schema/` & `tools/`
 
-- `schema/step.schema.json`, `schema/strategy-manifest.schema.json`,
+- `schema/strategy-manifest.schema.json`,
   `schema/basket-manifest.schema.json` — JSON Schema (draft-07) mirrors of the
   catalog and manifest TOML shapes.
-- `tools/validate_catalog.py` — schema + required-key + strategy
-  import/instantiate checks over every `catalog/**/*.toml`.
 - `tools/validate_manifests.py` — schema + pydantic model + parameter
   cross-check + instantiate for strategy manifests; schema + model + member-ref
   resolution for basket manifests.
@@ -103,10 +98,10 @@ flowchart LR
 
 ## 3. Declarative Layers & Cross-Repo Consumption
 
-- The `catalog/` step manifests are **proven runnable in-repo**:
-  `tools/validate_catalog.py` + `tests/catalog/` prove schema conformance and
-  that every `module:Class` reference imports and instantiates, and
-  `tools/run_step.py` + `tests/catalog/test_catalog_executor.py` run every step
+- The `manifests/strategies/` manifests are **proven runnable in-repo**:
+  `tools/validate_manifests.py` + `tests/manifests/` prove schema conformance
+  and that every `module:Class` reference imports and instantiates, and
+  `tools/run_step.py` + `tests/manifests/test_manifest_executor.py` run every manifest
   through `SimulatedContext` against a deterministic bar series (gap 0003
   closed). Executing a step against a live broker/feed remains owned by
   `tantra-runtime` / `tantra-exec`; visual-studio chaining is owned by

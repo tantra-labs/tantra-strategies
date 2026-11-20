@@ -59,3 +59,36 @@ def test_basket_members_resolve_to_catalog_manifests(path: Path) -> None:
         assert member.version in versions.get(member.name, set()), (
             f"basket {path.name} references {member.name}@{member.version} which has no manifest"
         )
+
+
+FAMILIES = (
+    "arbitrage",
+    "execution",
+    "market_making",
+    "mean_reversion",
+    "options",
+    "portfolio",
+    "size",
+    "trend",
+)
+
+
+def test_every_family_has_a_manifest() -> None:
+    """Ported from the retired catalog/ suite: every family stays represented."""
+    families = {StrategyManifest.load_toml(p).family for p in MANIFESTS}
+    assert set(FAMILIES) <= families
+
+
+@pytest.mark.parametrize("path", MANIFESTS, ids=lambda p: p.relative_to(ROOT))
+def test_declared_family_is_known(path: Path) -> None:
+    manifest = StrategyManifest.load_toml(path)
+    if manifest.family is not None:
+        assert manifest.family in FAMILIES
+
+
+@pytest.mark.parametrize("path", MANIFESTS, ids=lambda p: p.relative_to(ROOT))
+def test_declared_parameters_are_class_parameters(path: Path) -> None:
+    manifest = StrategyManifest.load_toml(path)
+    strategy = manifest.instantiate()
+    for param_name in manifest.parameters:
+        assert param_name in vars(type(strategy)), f"{path.name}: missing Parameter {param_name!r}"

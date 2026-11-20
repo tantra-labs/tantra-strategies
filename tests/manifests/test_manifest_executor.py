@@ -1,20 +1,21 @@
-"""In-repo catalog executor (gap 0003): every step runs deterministically."""
+"""In-repo manifest executor (gap 0003): every step runs deterministically."""
 
 from __future__ import annotations
 
 import importlib.util
 import subprocess
 import sys
-import tomllib
 import types
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parent.parent.parent
-CATALOG_DIR = ROOT / "catalog"
+from tantra_strategies import StrategyManifest
 
-STEPS = sorted(CATALOG_DIR.rglob("*.toml"))
+ROOT = Path(__file__).resolve().parent.parent.parent
+MANIFEST_DIR = ROOT / "manifests" / "strategies"
+
+STEPS = sorted(MANIFEST_DIR.rglob("*.toml"))
 
 
 def load_run_step() -> types.ModuleType:
@@ -28,16 +29,16 @@ def load_run_step() -> types.ModuleType:
 
 @pytest.mark.parametrize("path", STEPS, ids=lambda p: p.relative_to(ROOT))
 def test_step_runs_deterministically(path: Path) -> None:
-    """A catalog step must run twice with identical event traces and no crash."""
+    """A strategy manifest must run twice with identical event traces and no crash."""
     run_step = load_run_step()
-    manifest = tomllib.loads(path.read_text())
+    manifest = StrategyManifest.load_toml(path)
     first, second = run_step.run_step(manifest)
     assert first == second
     assert len(first) == len(second)
 
 
 def test_run_step_cli_smoke() -> None:
-    """The executor CLI runs every catalog step and reports no failures."""
+    """The executor CLI runs every strategy manifest and reports no failures."""
     result = subprocess.run(
         [sys.executable, "tools/run_step.py"],
         cwd=ROOT,
@@ -52,7 +53,7 @@ def test_run_step_cli_smoke() -> None:
 def test_run_step_cli_accepts_explicit_paths() -> None:
     """Explicit relative paths are accepted and reported relative to ROOT."""
     result = subprocess.run(
-        [sys.executable, "tools/run_step.py", "catalog/trend/turtle_breakout.toml"],
+        [sys.executable, "tools/run_step.py", "manifests/strategies/turtle_breakout.toml"],
         cwd=ROOT,
         capture_output=True,
         text=True,

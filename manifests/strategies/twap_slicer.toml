@@ -1,4 +1,6 @@
 name = "twap_slicer"
+title = "TWAP Slicer"
+family = "execution"
 version = "0.1.0"
 strategy = "tantra_strategies.strategies.execution:TWAPSlicer"
 promotion_status = "draft"

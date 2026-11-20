@@ -3,24 +3,31 @@ title = "VWAP Slicer"
 family = "execution"
 version = "1.0.0"
 strategy = "tantra_strategies.strategies.execution:VWAPSlicer"
+promotion_status = "draft"
 
-[params.instrument]
+[parameters.instrument]
 default = "NSE:RELIANCE-EQ"
 
-[params.total_quantity]
+[parameters.total_quantity]
 default = 100
 min = 1
 max = 1000000
 step = 1
 
-[params.slices]
+[parameters.slices]
 default = 10
 min = 1
 max = 500
 step = 1
 
-[params.side]
+[parameters.side]
 default = "buy"
 
-[params.profile]
+[parameters.profile]
 default = "15,13,12,11,10,9,8,7,8,7"
+
+[target_instruments]
+instruments = ["NSE:RELIANCE-EQ"]
+
+[capital_allocation]
+weight = 1.0

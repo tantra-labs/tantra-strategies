@@ -7,8 +7,7 @@
     `Alpha30Factor` (`strategies/alpha30.py`) with declarative `Parameter`s and
     exact `Decimal` math, registered in `strategies/__init__.py` and the top-level
     package.
-  - Catalog manifest `catalog/portfolio/equal_weight.toml` (family `portfolio`);
-    `catalog/` now 11 manifests (11/11 via `tools/validate_catalog.py`).
+  - Manifest `manifests/strategies/equal_weight.toml` (family `portfolio`). Legacy `catalog/` (11 manifests) was migrated into `manifests/strategies/` on 2026-11-20 and removed (`tools/validate_catalog.py` retired; use `tools/validate_manifests.py`).
   - Harness-loader layout (what `tantra-examples` `load_named` resolves): wheel
     `strategy.py` + `config.toml` + `step.toml` in
     `catalog_steps/portfolio/equal_weight/` and
@@ -60,8 +59,8 @@
 
 ## Phase / Slice Status
 * **Tier 6C (COMPLETE, `af20843`)**: Strategy SDK (`sdk/`) + 10 ported strategy
-  classes (`strategies/`) + declarative `catalog/` (10 step.toml, 8 families) +
-  `schema/` + `tools/validate_catalog.py`.
+  classes (`strategies/`) + declarative manifests (legacy `catalog/` migrated into
+  `manifests/strategies/` on 2026-11-20) + `schema/` + `tools/validate_manifests.py`.
 * **Plan 0001 Layer 3 (COMPLETE, `207a70c`)**: `manifest/` package —
   `StrategyManifest`, `BasketManifest`, promotion workflow, POC sidecars,
   `tools/validate_manifests.py`.

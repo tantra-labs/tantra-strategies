@@ -14,6 +14,7 @@ future work moved to [`docs/gaps/`](../gaps/README.md) and
 | Strategy families ported (`strategies/`) | Complete | `af20843` |
 | Declarative `catalog/` step manifests + schema | Complete | `af20843` |
 | Manifest tooling (`tools/validate_catalog.py`) | Complete | `af20843` |
+| Legacy `catalog/` migrated into `manifests/strategies/` (2026-11-20); `validate_catalog.py` retired | Complete | - |
 | Tests in `tests/` (parallel to package, no inline tests) | Complete | `af20843` |
 
 The source `honba-strategies` tree was unavailable, so the tier was implemented
@@ -37,7 +38,6 @@ pytest -q              # 119 tests, all passing
 ruff check .           # clean
 ruff format --check .  # clean
 mypy tantra_strategies  # clean
-python tools/validate_catalog.py    # 10/10 catalog manifests ok
 python tools/validate_manifests.py  # 2 strategy + 1 basket manifest ok
 ```
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Execute every catalog step deterministically (gap 0003).
+"""Execute every strategy manifest deterministically (gap 0003).
 
-For each ``catalog/**/step.toml`` manifest, load it, instantiate the strategy
+For each ``manifests/strategies/*.toml`` manifest, load it, instantiate the strategy
 with its declared parameter defaults, run it twice against deterministic daily
 bars in a fresh :class:`SimulatedContext`, and verify both runs produce
 identical order-event traces (research-live parity). Failures are reported as
@@ -12,9 +12,7 @@ Run:  python tools/run_step.py [path ...]
 
 from __future__ import annotations
 
-import importlib
 import sys
-import tomllib
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -25,60 +23,32 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from tantra_strategies.manifest.strategy import StrategyManifest  # noqa: E402
 from tantra_strategies.sdk.bar import Bar  # noqa: E402
 from tantra_strategies.sdk.context import SimulatedContext  # noqa: E402
 from tantra_strategies.sdk.order import OrderEvent  # noqa: E402
 from tantra_strategies.sdk.strategy import Strategy  # noqa: E402
 
-CATALOG_DIR = ROOT / "catalog"
+MANIFEST_DIR = ROOT / "manifests" / "strategies"
 DEFAULT_INSTRUMENT = "NSE:NIFTY50-INDEX"
 
 
-def load_manifest(path: Path) -> dict[str, object]:
-    """Load a catalog step manifest from TOML text."""
-    return tomllib.loads(path.read_text())
+def load_manifest(path: Path) -> StrategyManifest:
+    """Load a strategy manifest from TOML."""
+    return StrategyManifest.load_toml(path)
 
 
-def instruments_for(manifest: dict[str, object]) -> list[str]:
-    """Collect the instruments a step trades from its param defaults.
+def instruments_for(manifest: StrategyManifest) -> list[str]:
+    """Return the manifest's explicit target instruments.
 
-    Handles ``instrument``, comma-separated ``instruments``, and the
-    ``cash_instrument`` / ``futures_instrument`` pair (Arbitrage). Dedupes
-    preserving order and falls back to ``DEFAULT_INSTRUMENT`` when empty.
+    Falls back to ``DEFAULT_INSTRUMENT`` when the selector is rule-based.
     """
-    params = manifest.get("params")
-    if not isinstance(params, dict):
-        return [DEFAULT_INSTRUMENT]
-    instruments: list[str] = []
-    for key in ("instrument", "instruments", "cash_instrument", "futures_instrument"):
-        spec = params.get(key)
-        if not isinstance(spec, dict):
-            continue
-        default = spec.get("default")
-        if isinstance(default, str):
-            for piece in default.split(","):
-                cleaned = piece.strip()
-                if cleaned and cleaned not in instruments:
-                    instruments.append(cleaned)
-    return instruments or [DEFAULT_INSTRUMENT]
+    return list(manifest.target_instruments.instruments) or [DEFAULT_INSTRUMENT]
 
 
-def build_strategy(manifest: dict[str, object]) -> Strategy:
-    """Instantiate the step's ``module:Class`` with its declared defaults."""
-    strategy_ref = manifest.get("strategy")
-    if not isinstance(strategy_ref, str):
-        raise ValueError(f"step manifest has no 'strategy' string: {manifest}")
-    module_name, _, class_name = strategy_ref.partition(":")
-    strategy_class: type[Strategy] = getattr(importlib.import_module(module_name), class_name)
-    params = manifest.get("params")
-    if not isinstance(params, dict):
-        raise ValueError(f"step manifest has no 'params' dict: {manifest}")
-    kwargs: dict[str, object] = {}
-    for name, spec in params.items():
-        if not isinstance(spec, dict):
-            raise ValueError(f"step param {name!r} is not a spec dict: {spec}")
-        kwargs[name] = spec["default"]
-    return strategy_class(**kwargs)  # type: ignore[arg-type]
+def build_strategy(manifest: StrategyManifest) -> Strategy:
+    """Instantiate the manifest's strategy with its declared defaults."""
+    return manifest.instantiate()
 
 
 def deterministic_bars(instrument: str) -> list[Bar]:
@@ -108,7 +78,7 @@ def fingerprint(events: Sequence[OrderEvent]) -> tuple[object, ...]:
     )
 
 
-def run_step(manifest: dict[str, object]) -> tuple[tuple[object, ...], tuple[object, ...]]:
+def run_step(manifest: StrategyManifest) -> tuple[tuple[object, ...], tuple[object, ...]]:
     """Run a step twice and return both event-trace fingerprints.
 
     Uses the bar path only (never ``run_ticks``). Any exception propagates;
@@ -129,8 +99,8 @@ def run_step(manifest: dict[str, object]) -> tuple[tuple[object, ...], tuple[obj
 
 
 def main(argv: list[str]) -> int:
-    """Run every catalog step, or only the paths given on the command line."""
-    raw_paths = [Path(arg) for arg in argv] if argv else sorted(CATALOG_DIR.rglob("*.toml"))
+    """Run every strategy manifest, or only the paths given on the command line."""
+    raw_paths = [Path(arg) for arg in argv] if argv else sorted(MANIFEST_DIR.rglob("*.toml"))
     paths = [path.resolve() for path in raw_paths]
     failures = 0
     for path in paths:

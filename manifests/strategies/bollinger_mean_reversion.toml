@@ -3,24 +3,31 @@ title = "Bollinger Mean Reversion"
 family = "mean_reversion"
 version = "1.0.0"
 strategy = "tantra_strategies.strategies.mean_reversion:BollingerMeanReversion"
+promotion_status = "draft"
 
-[params.instrument]
+[parameters.instrument]
 default = "NSE:RELIANCE-EQ"
 
-[params.period]
+[parameters.period]
 default = 20
 min = 5
 max = 100
 step = 1
 
-[params.deviations]
+[parameters.deviations]
 default = 2
 min = 1
 max = 4
 step = 1
 
-[params.quantity]
+[parameters.quantity]
 default = 10
 min = 1
 max = 1000
 step = 1
+
+[target_instruments]
+instruments = ["NSE:RELIANCE-EQ"]
+
+[capital_allocation]
+weight = 1.0

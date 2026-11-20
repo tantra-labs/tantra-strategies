@@ -3,24 +3,31 @@ title = "Risk Parity"
 family = "portfolio"
 version = "1.0.0"
 strategy = "tantra_strategies.strategies.risk_parity:RiskParity"
+promotion_status = "draft"
 
-[params.instruments]
+[parameters.instruments]
 default = "NSE:NIFTY50-INDEX,NSE:BANKNIFTY-INDEX"
 
-[params.lookback]
+[parameters.lookback]
 default = 20
 min = 2
 max = 100
 step = 1
 
-[params.rebalance_period]
+[parameters.rebalance_period]
 default = 5
 min = 1
 max = 50
 step = 1
 
-[params.notional]
+[parameters.notional]
 default = 100000
 min = 1000
 max = 100000000
 step = 1000
+
+[target_instruments]
+instruments = ["NSE:NIFTY50-INDEX", "NSE:BANKNIFTY-INDEX"]
+
+[capital_allocation]
+weight = 1.0

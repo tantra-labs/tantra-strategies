@@ -3,24 +3,31 @@ title = "Market Making"
 family = "market_making"
 version = "1.0.0"
 strategy = "tantra_strategies.strategies.market_making:MarketMakingStrategy"
+promotion_status = "draft"
 
-[params.instrument]
+[parameters.instrument]
 default = "NSE:RELIANCE-EQ"
 
-[params.spread]
+[parameters.spread]
 default = "0.50"
 min = "0.10"
 max = "10.00"
 step = "0.10"
 
-[params.quote_quantity]
+[parameters.quote_quantity]
 default = 5
 min = 1
 max = 1000
 step = 1
 
-[params.max_position]
+[parameters.max_position]
 default = 50
 min = 1
 max = 10000
 step = 1
+
+[target_instruments]
+instruments = ["NSE:RELIANCE-EQ"]
+
+[capital_allocation]
+weight = 1.0

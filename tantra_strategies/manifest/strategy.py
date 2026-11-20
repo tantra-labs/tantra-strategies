@@ -14,7 +14,7 @@ import tomllib
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -69,12 +69,26 @@ class CapitalAllocation(BaseModel):
         return self
 
 
+StrategyFamily = Literal[
+    "arbitrage",
+    "execution",
+    "market_making",
+    "mean_reversion",
+    "options",
+    "portfolio",
+    "size",
+    "trend",
+]
+
+
 class StrategyManifest(BaseModel):
     """A versioned, promotable strategy definition."""
 
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(pattern=r"^[a-z0-9_]+$")
+    title: str | None = None
+    family: StrategyFamily | None = None
     version: str = Field(pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$")
     strategy: str = Field(pattern=r"^tantra_strategies\.[A-Za-z0-9_.]+:[A-Za-z_][A-Za-z0-9_]*$")
     parameters: dict[str, ParameterSpec] = Field(min_length=1)

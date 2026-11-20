@@ -22,10 +22,10 @@ the package layout, strategy families, and declarative catalog were rebuilt in
 | Strategy authoring base | `tantra_strategies/sdk/strategy.py` — `Strategy` + `IndicatorRegistry` |
 | Declarative parameters | `tantra_strategies/sdk/parameter.py` — `Parameter` descriptor |
 | Bars / orders / indicators | `tantra_strategies/sdk/` — `bar.py`, `order.py`, `indicators.py`, `context.py`, `quoting.py` |
-| `catalog/` step manifests | `catalog/*.toml` (10 files, 8 families: `arbitrage`, `execution`, `market_making`, `mean_reversion`, `options`, `portfolio`, `size`, `trend`) |
+| Strategy manifests (incl. former `catalog/`) | `manifests/strategies/*.toml` (11 files, 8 families: `arbitrage`, `execution`, `market_making`, `mean_reversion`, `options`, `portfolio`, `size`, `trend`) |
 | `schema/` | `schema/step.schema.json`, `schema/strategy-manifest.schema.json`, `schema/basket-manifest.schema.json` |
-| `tools/` manifest linters | `tools/validate_catalog.py`, `tools/validate_manifests.py` |
-| `tests/` | `tests/{sdk,strategies,manifests,catalog}/` + `tests/test_init.py` |
+| `tools/` manifest linters | `tools/validate_manifests.py` |
+| `tests/` | `tests/{sdk,strategies,manifests}/` + `tests/test_init.py` |
 | Versioned strategy/basket manifests (plan 0001) | `tantra_strategies/manifest/` + `manifests/strategies/` + `manifests/baskets/` |
 
 ## Migration steps performed
@@ -36,8 +36,8 @@ the package layout, strategy families, and declarative catalog were rebuilt in
    `Decimal` indicators, `Parameter`, order domain, and `SimulatedContext`.
 3. **Port the strategy families** — nine modules / ten classes in
    `strategies/`, mirroring the StockSharp-inspired catalog.
-4. **Author the declarative catalog** — `catalog/*.toml` step manifests + JSON
-   schemas + validator tools.
+4. **Author the declarative manifests** — `manifests/strategies/*.toml` + JSON
+   schemas + validator tools (the legacy `catalog/` was migrated here).
 5. **Add the manifest layer (plan 0001)** — `StrategyManifest` /
    `BasketManifest` / promotion workflow + sidecar TOMLs + schema/tooling.
 6. **Migrate tests** — all tests in `tests/` parallel to the package; zero
@@ -66,7 +66,6 @@ pytest -q
 ruff check .
 ruff format --check .
 mypy tantra_strategies
-python tools/validate_catalog.py
 python tools/validate_manifests.py
 ```
 

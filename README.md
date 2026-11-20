@@ -11,22 +11,22 @@ historical bars and live WebSocket feeds.
 
 ## Included Strategy Families
 
-| Family | Module | Catalog |
+| Family | Module | Manifest |
 | :--- | :--- | :--- |
-| Quoting | `tantra_strategies.strategies.quoting` | `catalog/` |
-| Cash–Futures Arbitrage | `tantra_strategies.strategies.arbitrage` | `catalog/arbitrage/` |
-| Market Making | `tantra_strategies.strategies.market_making` | `catalog/market_making/` |
-| Mean Reversion (Bollinger) | `tantra_strategies.strategies.mean_reversion` | `catalog/mean_reversion/` |
-| Turtle Breakout | `tantra_strategies.strategies.turtle` | `catalog/trend/` |
-| Risk Parity | `tantra_strategies.strategies.risk_parity` | `catalog/portfolio/` |
-| TWAP / VWAP Slicers | `tantra_strategies.strategies.execution` | `catalog/execution/` |
+| Quoting | `tantra_strategies.strategies.quoting` | `manifests/strategies/` |
+| Cash–Futures Arbitrage | `tantra_strategies.strategies.arbitrage` | `manifests/strategies/cash_futures_arbitrage.toml` |
+| Market Making | `tantra_strategies.strategies.market_making` | `manifests/strategies/market_making.toml` |
+| Mean Reversion (Bollinger) | `tantra_strategies.strategies.mean_reversion` | `manifests/strategies/bollinger_mean_reversion.toml` |
+| Turtle Breakout | `tantra_strategies.strategies.turtle` | `manifests/strategies/turtle_breakout.toml` |
+| Risk Parity | `tantra_strategies.strategies.risk_parity` | `manifests/strategies/risk_parity.toml` |
+| TWAP / VWAP Slicers | `tantra_strategies.strategies.execution` | `manifests/strategies/{twap_slicer,vwap}.toml` |
 
 ## Layout (4-Zone Clean Package)
 
 ```
 tantra-strategies/
 ├── tantra_strategies/   # Zone 1: strategy SDK + strategies + manifest models
-├── catalog/              # Zone 2: declarative step.toml manifests
+├── catalog_steps/        # Zone 2: runnable pipeline steps (+ registry.json)
 ├── manifests/            # Zone 2: versioned strategy & basket manifests (plan 0001)
 │   ├── strategies/       #   StrategyManifest sidecars (turtle_breakout, twap_slicer, ...)
 │   └── baskets/          #   BasketManifest groupings

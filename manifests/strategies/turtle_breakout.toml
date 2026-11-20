@@ -1,4 +1,6 @@
 name = "turtle_breakout"
+title = "Turtle Breakout"
+family = "trend"
 version = "0.1.0"
 strategy = "tantra_strategies.strategies.turtle:TurtleBreakout"
 promotion_status = "draft"

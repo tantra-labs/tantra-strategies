@@ -29,7 +29,7 @@ strategy.run(context, bars)  # bars: list[Bar]
 | `FixedFractional` | `sizing.py` | `Strategy` | SMA cross entries sized as a fixed fraction of notional risked. |
 
 All `Parameter` defaults/bounds below match both the class descriptors and the
-corresponding `catalog/*.toml` step manifests.
+corresponding `manifests/strategies/*.toml` manifests.
 
 ## Per-strategy semantics
 
@@ -142,5 +142,5 @@ All prices, spreads, thresholds, quantities, weights, and indicator values are
 ## Related
 
 - `tantra_strategies/sdk/` — base classes and primitives (`code-sdk.md`)
-- `catalog/` — step.toml manifests naming each strategy (`module:Class`)
+- `manifests/strategies/` — manifests naming each strategy (`module:Class`); runnable pipeline steps live in `catalog_steps/` + `registry.json`
 - `tests/strategies/` — one lifecycle test file per strategy
