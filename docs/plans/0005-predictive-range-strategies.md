@@ -79,7 +79,7 @@ source, MCP) and `tests/strategies/test_predictive_ranges.py`. Gates: `ruff chec
 
 ## 9. Known limitations and next steps
 
-- Bars come from CSV only; lakehouse v3 source is `tantra-data` gap 0026 (cited in `bar_source.py`).
+- Bars come from the tantra-data Lakehouse v3 (`TANTRA_LIBRARY_LAKEHOUSE_ROOT`: pinned commit, closed bars, Decimal; `LakehouseBarSource`) or CSV files (`TANTRA_LIBRARY_DATA_ROOT`). Data gap 0026 closed 2026-11-20.
 - Wiring (not done): runtime `docs/plans/0010` (MCP supervisor + `/api/v2` proxy), agent
   `docs/plans/0017` (copilot access), ui-web `docs/plans/0017` (Indicator Lab tab).
 - Deferred: optional Rust port of hot indicators, `tantra-market` plan 0005.

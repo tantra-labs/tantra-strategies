@@ -1,7 +1,9 @@
-"""Bar sources for the library MCP server (CSV files under a data root, inline JSON rows).
+"""Bar sources for the library MCP server.
 
-The lakehouse (tantra-data Parquet v3) source is not wired yet:
-# stand-in for tantra-data/docs/gaps/0026-strategies-lakehouse-bar-source.md
+* :class:`LakehouseBarSource` — tantra-data Lakehouse v3 (pinned commit, closed bars,
+  Decimal prices) via ``tantra_data.service.library_bars.LakehouseBarReader``.
+* :class:`CsvBarSource` — CSV files confined to a data root (tests / ad-hoc files).
+* :func:`bars_from_json` — inline JSON rows.
 """
 
 from __future__ import annotations
@@ -11,7 +13,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from tantra_library.errors import InvalidParam, LimitExceeded
 from tantra_strategies.sdk.bar import Bar
@@ -101,3 +103,87 @@ class CsvBarSource:
                     raise LimitExceeded(f"bars file exceeds {MAX_ROWS} rows")
                 bars.append(_row_to_bar(row, instrument=instrument, interval=interval))
         return bars
+
+
+class _ClosedBar(Protocol):
+    ts: datetime
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    volume: int
+
+
+class _PinnedBars(Protocol):
+    commit_sha: str
+    bars: Sequence[_ClosedBar]
+
+
+class _BarReader(Protocol):
+    def read_closed_bars(
+        self, instrument: str, *, interval: str = ..., ref: str = ...
+    ) -> _PinnedBars: ...
+
+
+def _default_reader(root: Path, max_rows: int) -> _BarReader:
+    try:
+        from tantra_data.service.library_bars import LakehouseBarReader
+    except ImportError as exc:  # optional dependency (pip install tantra-strategies[lakehouse])
+        raise InvalidParam(
+            "lakehouse bar source needs the tantra-data package (tantra-strategies[lakehouse])"
+        ) from exc
+    reader: _BarReader = LakehouseBarReader(root, max_rows=max_rows)
+    return reader
+
+
+class LakehouseBarSource:
+    """Reads closed bars from a tantra-data Lakehouse v3 root at a pinned ``ref``.
+
+    ``ref`` is a branch, tag or commit sha; the commit it resolved to is kept in
+    :attr:`last_commit_sha` so a study can be reproduced by passing it back as ``ref``.
+    """
+
+    def __init__(
+        self, root: Path, *, max_rows: int = MAX_ROWS, reader: _BarReader | None = None
+    ) -> None:
+        self._reader = reader if reader is not None else _default_reader(root, max_rows)
+        self.last_commit_sha: str | None = None
+
+    def load(self, ref: str, *, instrument: str, interval: str) -> list[Bar]:
+        try:
+            pinned = self._reader.read_closed_bars(instrument, interval=interval, ref=ref)
+        except Exception as exc:
+            raise _map_reader_error(exc) from exc
+        bars = [
+            Bar(
+                instrument=instrument,
+                ts=row.ts,
+                open=_price(row.open, "open"),
+                high=_price(row.high, "high"),
+                low=_price(row.low, "low"),
+                close=_price(row.close, "close"),
+                volume=row.volume,
+                interval=interval,
+            )
+            for row in pinned.bars
+        ]
+        self.last_commit_sha = pinned.commit_sha
+        return bars
+
+
+def _map_reader_error(exc: Exception) -> Exception:
+    name = type(exc).__name__
+    if name == "BarLimitExceeded":
+        return LimitExceeded(str(exc))
+    if name in {"UnknownRef", "NonDecimalBars"}:
+        return InvalidParam(f"{name}: {exc}")
+    return exc
+
+
+def bar_source_from_env(env: Mapping[str, str]) -> Any:
+    """``TANTRA_LIBRARY_LAKEHOUSE_ROOT`` (preferred) or ``TANTRA_LIBRARY_DATA_ROOT`` (CSV)."""
+    lake = env.get("TANTRA_LIBRARY_LAKEHOUSE_ROOT")
+    if lake:
+        return LakehouseBarSource(Path(lake))
+    root = env.get("TANTRA_LIBRARY_DATA_ROOT")
+    return CsvBarSource(Path(root)) if root else None

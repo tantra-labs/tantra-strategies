@@ -103,7 +103,7 @@ def test_float_and_both_sources(srv: LibraryMcpServer) -> None:
     err, text = _call(
         srv, "tantra_indicator_compute", {"id": "ind.atr", "bars_file": "a.csv", "instrument": "X"}
     )
-    assert err and "no data root" in text
+    assert err and "no bar source configured" in text
 
 
 def test_signal_study(srv: LibraryMcpServer) -> None:

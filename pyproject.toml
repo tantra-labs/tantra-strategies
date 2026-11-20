@@ -18,6 +18,9 @@ dependencies = [
 tantra-library-mcp = "tantra_library.mcp.server:main"
 
 [project.optional-dependencies]
+lakehouse = [
+    "tantra-data",
+]
 dev = [
     "pytest>=8.0.0",
     "ruff>=0.4.0",

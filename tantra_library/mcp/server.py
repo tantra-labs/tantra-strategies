@@ -8,11 +8,10 @@ import sys
 from collections.abc import Mapping
 from datetime import datetime
 from decimal import Decimal
-from pathlib import Path
 from typing import TextIO
 
 from tantra_library import EntryKind, VolumeQuality, default_registry
-from tantra_library.bar_source import BarSource, CsvBarSource, bars_from_json
+from tantra_library.bar_source import BarSource, bar_source_from_env, bars_from_json
 from tantra_library.errors import InvalidParam, LibraryError
 from tantra_library.registry import Registry
 from tantra_library.study import EventFilter, signal_study
@@ -152,9 +151,8 @@ class LibraryMcpServer:
     ) -> None:
         self._registry = registry if registry is not None else default_registry()
         if bar_source is None:
-            root = os.environ.get("TANTRA_LIBRARY_DATA_ROOT")
-            bar_source = CsvBarSource(Path(root)) if root else None
-        self._bars = bar_source
+            bar_source = bar_source_from_env(os.environ)
+        self._bars: BarSource | None = bar_source
 
     # ---- JSON-RPC ----
     def handle(self, message: Mapping[str, object]) -> dict[str, object] | None:
@@ -334,7 +332,10 @@ class LibraryMcpServer:
         if not isinstance(ref, str):
             raise InvalidParam("'bars_file' must be a string")
         if self._bars is None:
-            raise InvalidParam("no data root configured (set TANTRA_LIBRARY_DATA_ROOT)")
+            raise InvalidParam(
+                "no bar source configured (set TANTRA_LIBRARY_LAKEHOUSE_ROOT for the "
+                "tantra-data lakehouse, or TANTRA_LIBRARY_DATA_ROOT for CSV files)"
+            )
         return self._bars.load(ref, instrument=inst, interval=interval), vq
 
 
