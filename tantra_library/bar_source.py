@@ -1,7 +1,7 @@
 """Bar sources for the library MCP server (CSV files under a data root, inline JSON rows).
 
 The lakehouse (tantra-data Parquet v3) source is not wired yet:
-# stand-in for tantra-data/docs/gaps/<TBD>-strategies-lakehouse-bar-source.md
+# stand-in for tantra-data/docs/gaps/0026-strategies-lakehouse-bar-source.md
 """
 
 from __future__ import annotations

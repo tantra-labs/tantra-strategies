@@ -1,80 +1,85 @@
-# 0005 — Predictive Range Strategy Recipes
+# 0005 — Concept & Indicator Library (`tantra_library`), Predictive Range Recipes and Library MCP Server
 
-**Status**: Proposed (2026-11-20) — design only. Parent: root plan 0016 (Track T22, phase T22.6).
+**Status**: Implemented 2026-11-20 (T22.1–T22.5; commits `cb7efbb` S1 core, `24c8aa3` S2 composites/detectors,
+`86c6b63` S3 catalog, `2487490` S4 study + recipes, `4eef653` S5 MCP). Root plan: `docs/plans/0016-concept-indicator-library-for-agents.md`.
+This file is kept as the library's reference document. Wiring into Rust/TS repos is planned, not done (see §9).
 
-## 0. Executive Summary & Objective
+## 1. Package layout (`tantra_library/`)
 
-Implement two strategies from root plan 0016 §2.5 as `tantra-strategies` recipes, consuming library indicators via
-`tantra-ffi` (`tantra.library`): `recipe.pr-trend-pullback` and `recipe.pr-vidya-breakout`, each with long and short
-mirrors, validated in the Strategy Tester. Execution logic stays in Python strategies; all orders go through `RiskEngine`.
-
-## 1. Context & Gaps Covered
-
-- Depends on market plan 0005 (`ind.predictive-ranges`, `ind.vidya-trend`, `ind.volume-delta-pct`, `det.*`), `tantra-ffi`
-  `tantra.library` (root plan 0016 T22.6), and the Trade Plan SDK (plan 0003) for stop/target handling (to confirm in T22.6).
-- Repo has `manifests/`, `registry.json`, `catalog_steps/`, `tantra_strategies/`. Recipe manifests are also discoverable in the
-  library (root plan 0016 §7.2, proposed: manifest in library, code here, linked by id).
-
-## 2. Component Specifications & Phases
-
-### 2.1 Library access
-
-`tantra.library.compute(entry_id, params, bars) -> pyarrow.Table` (Decimal columns as Arrow `Decimal128(38,8)`; state/event columns int8/bool).
-Strategy code converts to `decimal.Decimal` from Arrow/strings only — never `float` for prices, levels, stops, R multiples.
-Same Rust evaluator as Experimental Analysis (research-live parity; frames identical Rust vs Python).
-Bars are closed only; HTF `timeframe` params resolve to last closed HTF bar.
-
-### 2.2 `recipe.pr-trend-pullback` (long; short = mirror)
-
-| Part | Rule (library ids) |
+| Module | Role |
 |---|---|
-| Filter | `det.pr-trend-regime` = up (K >= 2 consecutive up steps of `ind.predictive-ranges`) |
-| Trigger | `det.pr-zone-touch`(support: bar low <= S1) **and** `det.reversal-bar`(bullish) within the zone, same or next closed bar |
-| Entry | next-bar open after the confirmed trigger bar close (market/limit per Trade Plan SDK) |
-| Stop | below S2, or zone low - `buffer * ATR` (param `stop_mode`) |
-| Target | R1, or ladder center -> R1 (`partial_exit`) |
-Short mirror: regime down, resistance touch (high >= R1), bearish reversal bar, stop above R2, target S1 / center -> S1.
-Params (manifest): `pr_length=200`, `pr_factor="6"`, `k_steps=2`, `buffer_atr="0.25"`, `stop_mode`, `ladder`.
+| `errors.py` | Typed errors (`InputQualityError`, validation errors) |
+| `model.py` | `Entry`, `ParamSpec`, `OutputSpec`, `Provenance`, `Frame`, `StreamingComputation`, enums |
+| `registry.py` | `Registry`: `register/get/entries/search/validate/resolve_params/build/evaluate/describe_markdown` |
+| `primitives.py` / `indicators.py` / `composites.py` / `detectors.py` | Computations |
+| `adapters.py` | Input adapters (bars to computation inputs) |
+| `catalog.py` | `default_registry()` — 44 entries |
+| `concepts/*.md` | 12 concept pages |
+| `study.py` | `signal_study`, `EventFilter`, `StudyResult` |
+| `bar_source.py` | `BarSource` Protocol, `CsvBarSource`, `bars_from_json` |
+| `mcp/server.py` | `LibraryMcpServer` (stdio) |
 
-### 2.3 `recipe.pr-vidya-breakout` (long; short = mirror)
+## 2. Entry model
 
-| Part | Rule |
-|---|---|
-| Filter | `ind.vidya-trend` = up **and** `ind.volume-delta-pct >= +30%` (`volume_quality: real` required) |
-| Trigger | close > R1 of **the range active before the bar** (pinned prior-range level; the bar's own range may re-centre) |
-| Stop | last swing low (`prim.swing-pivot`) or below R1 (param) |
-| Target | 1.5R (`r_multiple` param) |
-Short mirror: trend down, delta <= -30%, close < S1 of prior range, swing high stop, 1.5R.
-On tick-volume instruments the recipe refuses to start (`LibraryError::InputQuality` surfaced as a configuration error).
+`Entry(id, kind, title, summary, family, concepts, depends_on, params, outputs, inputs, volume_quality,
+determinism, aliases, related, provenance, body_md, factory)`. Kinds: family, concept, primitive, indicator,
+composite, detector, recipe. Params are typed (int/decimal/enum/bool) with bounds; floats are rejected
+(`ParamSpec.coerce`). `volume_quality: real` entries refuse tick-volume sources. `depends_on` is validated
+for existence and acyclicity at build time.
 
-### 2.4 Files and registration
+## 3. Catalog layers (44 entries)
 
-- `tantra_strategies/predictive_range/{pr_trend_pullback.py, pr_vidya_breakout.py, _library.py}` (thin wrapper over `tantra.library`; shared sizing/stop helpers via Trade Plan SDK).
-- `manifests/recipe.pr-trend-pullback.toml`, `manifests/recipe.pr-vidya-breakout.toml` (params, library ids, instrument/timeframe defaults, `universe` hints) and entries in `registry.json` (schema as existing entries; to confirm in T22.6); optional `catalog_steps/` entry if the step catalog pattern fits.
-- Strategy classes use `StrategyContext` protocols only (no `isinstance(context, SimulatedContext)`); injected clock; `Decimal` money math.
+Families 6; concepts 12; primitives 8 (true-range, rma, sma, highest, lowest, swing-pivot, up-down-volume,
+linreg); indicators 7 (atr, atr-bands, cmo, vidya, volume-delta-pct, alligator, awesome-oscillator);
+composites 3 (predictive-ranges, vidya-trend, reversal-bars); detectors 6 (pr-center-step, pr-trend-regime,
+pr-zone-touch, pr-zone-close-break, reversal-bar, vidya-trend-flip); recipes 2 (not computable).
+Zone/break detectors compare against the previous bar's levels because a breakout re-centers the range on
+the same bar. Reversal Bars / VIDYA-trend rules are reconstructed from published descriptions (all rules are
+parameters; MFI "squat" filter not implemented).
 
-### 2.5 Risk path
+## 4. Recipes (`tantra_strategies/strategies/predictive_ranges.py`)
 
-Strategies only emit order intents; every order passes `RiskEngine` pre-trade checks (price bands, freeze limits, OTR, reduce-only)
-unconditionally in backtest and live. Agent-varied parameter sets are research artefacts only; promotion to live follows existing approval flow.
+`PrTrendPullbackStrategy` and `PrVidyaBreakoutStrategy` are ordinary SDK `Strategy` subclasses consuming
+library entries by id; they trade only via `Strategy` and `RiskEngine`. Recipe entries in the registry
+(`pr-trend-pullback`, `pr-vidya-breakout`) point to them and are not computable.
+Known limitation: stop/target hits exit with a market order at the bar close, not at the stop/target price
+(gap 0008).
 
-### 2.6 Strategy Tester validation plan
+## 5. Signal study
 
-1. **Event sanity** first: run Signal Study (runtime plan 0010) on `det.pr-zone-touch` / pinned breakout for NIFTY 5m, 2019–2026, to see raw forward-move edge before costs.
-2. **IS/OOS**: chronological split (e.g. 2019–2023 IS, 2024–2026 OOS) plus walk-forward using T21 `ParameterSweepRunner` (WFE, DSR); parameters frozen from IS only.
-3. **Costs**: full Indian cost schedule (brokerage, STT, exchange, stamp, GST) and slippage via the runtime cost model; report gross vs net.
-4. **By regime**: breakdown by trend/range regime (`det.pr-trend-regime`), volatility tercile (ATR percentile), year, and session bucket.
-5. **Robustness**: parameter-neighbourhood heatmap (length x factor), min trade count threshold, drawdown/MAR, R-multiple distribution, no-lookahead assertion (re-run with truncated data yields identical past signals).
-6. Reproducibility: pin `data_commit` + entry versions in each report.
+`signal_study(...)` converts a detector column into forward-return, hit-rate, MFE/MAE and by-year
+statistics, with an optional `EventFilter` (another entry's column equals a value). Levels are pinned
+pre-bar so there is no look-ahead.
 
-## 3. Tests & Verification
+## 6. MCP server
 
-pytest in `tests/`: library-wrapper Decimal conversion (no floats), recipe rule unit tests on synthetic Arrow tables (long and short, pinned-level regression), refuse-on-tick-volume, manifest/registry schema tests, Rust-vs-Python frame parity (with ffi), backtest smoke test on a short fixture asserting orders reach `RiskEngine`.
-Gates: `ruff check . && ruff format --check .`, `mypy --strict`, `pytest -v`.
+Newline-delimited JSON-RPC 2.0 over stdio. Tools:
+- `tantra_library_search {query, kind?, family?, limit?}`
+- `tantra_library_describe {id, format: markdown|json}`
+- `tantra_indicator_compute {id, params?, bars? | bars_file?, instrument, interval?, volume_quality?, tail? <=2000}`
+- `tantra_signal_study {id, params?, event_column, direction?, horizons? <=10, filter?{id,params?,column,equals}, bars? | bars_file?, instrument, interval?, volume_quality?, max_events?}`
 
-## 4. Open Questions
+Run: `cd tantra-strategies && TANTRA_LIBRARY_DATA_ROOT=/path/to/csv/bars .venv/bin/tantra-library-mcp`
+(or `python -m tantra_library.mcp`). Register in any MCP client as a stdio server with command
+`tantra-library-mcp`.
 
-1. Exact trigger-confirmation timing (same bar vs next bar) for pullback; fixed after Signal Study (T22.4) evidence.
-2. Whether Trade Plan SDK (plan 0003) supports ladder partial exits needed by `ladder` mode.
-3. Recipe manifest ownership (library vs strategies) per root plan 0016 §7.2.
-4. Instruments for which `volume_quality: real` holds (index futures vs spot index).
+## 7. Invariants
+
+Zero floats (Decimal everywhere; JSON parsed with `parse_float=Decimal`); closed-bar determinism; bounded
+work (<=200k bars per evaluate, <=5000 inline bars via `bars_from_json`, <=10 horizons, <=2000 returned
+rows, <=8 MiB per JSON-RPC line); `CsvBarSource` confined to `TANTRA_LIBRARY_DATA_ROOT`; MCP inputs
+validated against entry manifests; the library never places orders.
+
+## 8. Tests
+
+`tests/library/*` (model, registry, primitives, indicators, composites, detectors, catalog, study, bar
+source, MCP) and `tests/strategies/test_predictive_ranges.py`. Gates: `ruff check .`, `ruff format --check .`,
+`mypy --strict`, `pytest -q`.
+
+## 9. Known limitations and next steps
+
+- Recipe exits fill at bar close: [gap 0008](../gaps/0008-recipe-exits-at-bar-close.md).
+- Bars come from CSV only; lakehouse v3 source is `tantra-data` gap 0026 (cited in `bar_source.py`).
+- Wiring (not done): runtime `docs/plans/0010` (MCP supervisor + `/api/v2` proxy), agent
+  `docs/plans/0017` (copilot access), ui-web `docs/plans/0017` (Indicator Lab tab).
+- Deferred: optional Rust port of hot indicators, `tantra-market` plan 0005.

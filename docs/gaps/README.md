@@ -15,7 +15,7 @@ the remaining future work is enumerated below.
 
 | # | Title | Plan |
 |---|-------|------|
-| _none_ | — | — |
+| [0008](0008-recipe-exits-at-bar-close.md) | Predictive Range recipe strategies exit stop/target hits at bar close, not at the stop/target price | root plan 0016 |
 
 ## Closed Gaps
 
