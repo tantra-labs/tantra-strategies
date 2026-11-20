@@ -42,11 +42,11 @@ def test_registry_validates_and_counts() -> None:
     reg.validate()
     expected = {
         EntryKind.FAMILY: 6,
-        EntryKind.CONCEPT: 12,
-        EntryKind.PRIMITIVE: 8,
+        EntryKind.CONCEPT: 14,
+        EntryKind.PRIMITIVE: 9,
         EntryKind.INDICATOR: 10,
-        EntryKind.COMPOSITE: 3,
-        EntryKind.DETECTOR: 6,
+        EntryKind.COMPOSITE: 5,
+        EntryKind.DETECTOR: 8,
         EntryKind.RECIPE: 2,
     }
     for kind, count in expected.items():
@@ -64,7 +64,7 @@ def test_every_computable_entry_evaluates() -> None:
     reg = default_registry()
     bars = _bars()
     computable = [e for e in reg.entries() if e.factory is not None]
-    assert len(computable) == 27
+    assert len(computable) == 31
     for entry in computable:
         frame = reg.evaluate(entry.id, {}, bars)
         assert set(frame.columns) == {o.name for o in entry.outputs}, entry.id

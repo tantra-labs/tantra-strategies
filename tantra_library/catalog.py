@@ -56,6 +56,12 @@ from tantra_library.primitives import (
     source_value,
 )
 from tantra_library.registry import Registry
+from tantra_library.zones import (
+    EeSweep,
+    ElephantZones,
+    OpeningRange,
+    Orb15Breakout,
+)
 
 P = Mapping[str, ParamValue]
 Maker = Callable[[P], StreamingComputation]
@@ -136,6 +142,8 @@ _FAMILIES = {
     "price-action": "Bar-pattern and swing-structure reading.",
 }
 
+_SL_MODES = ("tight_center", "outer_edge", "outer_atr_buffer", "percentile_shield")
+
 # (slug, title, summary, family)
 _CONCEPTS = (
     ("atr", "Average True Range", "Smoothed per-bar price range.", "volatility"),
@@ -155,7 +163,93 @@ _CONCEPTS = (
     ("trend-pullback", "Trend Pullback", "Entering with the trend on a dip.", "trend"),
     ("breakout", "Breakout", "Closing beyond a pinned level.", "support-resistance"),
     ("r-multiple", "R-Multiple", "Reward measured in units of initial risk.", "price-action"),
+    (
+        "elephant-zones",
+        "Elephant Zones",
+        "Session-open percentile support/resistance bands.",
+        "support-resistance",
+    ),
+    ("opening-range", "Opening Range", "High/low of a session's first bars.", "price-action"),
 )
+
+_ZONES_PROV = Provenance("tantra-strategies T21.2 (sdk/primitives.py)")
+_SESSION_PARAMS = (
+    ParamSpec(
+        "horizon",
+        ParamType.ENUM,
+        "intraday",
+        "session horizon",
+        choices=("intraday", "weekly_expiry", "monthly_expiry", "commodity_cycle"),
+    ),
+    ParamSpec(
+        "asset_class",
+        ParamType.ENUM,
+        "index",
+        "asset class",
+        choices=("index", "equity_fno", "commodity", "fx"),
+    ),
+)
+_EZ_OUT = _outs(
+    ("s2", _PRICE, "support 2"),
+    ("s1", _PRICE, "support 1"),
+    ("r1", _PRICE, "resistance 1"),
+    ("r2", _PRICE, "resistance 2"),
+    ("half_width", _PRICE, "band half width (0.5 ATR)"),
+    ("long_outer_sl", _PRICE, "stop for a long at the s1 band; null until ATR is ready"),
+    ("short_outer_sl", _PRICE, "stop for a short at the r1 band; null until ATR is ready"),
+)
+_OR_OUT = _outs(
+    ("or_high", _PRICE, "opening range high; null until the window completes"),
+    ("or_low", _PRICE, "opening range low; null until the window completes"),
+    ("or_mid", _PRICE, "opening range midpoint; null until the window completes"),
+)
+
+
+def _ez_params() -> tuple[ParamSpec, ...]:
+    return (
+        *_SESSION_PARAMS,
+        _int("atr_period", 14, "ATR period"),
+        ParamSpec(
+            "sl_mode",
+            ParamType.ENUM,
+            "outer_atr_buffer",
+            "stop placement mode",
+            choices=_SL_MODES,
+        ),
+        _dec("sl_buffer_atr", "0.25", "ATR buffer beyond the band edge"),
+        _int("max_sessions", 20, "completed sessions retained", 1, 500),
+    )
+
+
+def _ez(p: P) -> ElephantZones:
+    return ElephantZones(
+        _s(p, "horizon"),
+        _s(p, "asset_class"),
+        _i(p, "atr_period"),
+        _s(p, "sl_mode"),
+        _d(p, "sl_buffer_atr"),
+        _i(p, "max_sessions"),
+    )
+
+
+def _or_params() -> tuple[ParamSpec, ...]:
+    return (
+        _int("opening_bars", 3, "bars in the opening window"),
+        _dec("atr_band_mult", "0.25", "band half width in ATR"),
+        *_SESSION_PARAMS,
+        _int("atr_period", 14, "ATR period"),
+    )
+
+
+def _orng(p: P) -> OpeningRange:
+    return OpeningRange(
+        _i(p, "opening_bars"),
+        _d(p, "atr_band_mult"),
+        _s(p, "horizon"),
+        _s(p, "asset_class"),
+        _i(p, "atr_period"),
+    )
+
 
 _PR_PROV = Provenance(
     "LuxAlgo — Predictive Ranges (open-source on TradingView, 2023); clean-room "
@@ -228,6 +322,38 @@ _RB_OUT = _outs(
     ("bull_trigger", _PRICE, "high of a bullish reversal bar"),
     ("bear_trigger", _PRICE, "low of a bearish reversal bar"),
 )
+
+
+def _outer_buffer_stop() -> Entry:
+    return Entry(
+        "prim.outer-buffer-stop",
+        EntryKind.PRIMITIVE,
+        "Outer Buffer Stop",
+        "Stop placement relative to a zone band (describe-only).",
+        family="family.support-resistance",
+        concepts=("concept.elephant-zones",),
+        params=(
+            ParamSpec(
+                "sl_mode",
+                ParamType.ENUM,
+                "outer_atr_buffer",
+                "stop placement mode",
+                choices=_SL_MODES,
+            ),
+            _dec("buffer_atr", "0.25", "ATR buffer beyond the band edge"),
+        ),
+        body_md=(
+            "Stop modes for a trade taken at a zone band:\n\n"
+            "- `tight_center`: stop just beyond the band centre.\n"
+            "- `outer_edge`: stop at the outer edge of the band.\n"
+            "- `outer_atr_buffer`: outer edge plus `buffer_atr` * ATR.\n"
+            "- `percentile_shield`: wider ATR-percentile based shield.\n\n"
+            "Implemented by `OuterBufferStopPolicy` in tantra_strategies.sdk.primitives; "
+            "`ind.elephant-zones` exposes the outer-buffer stops as outputs."
+        ),
+        provenance=_ZONES_PROV,
+        factory=None,
+    )
 
 
 def _prims() -> list[Entry]:
@@ -570,6 +696,35 @@ def _composites() -> list[Entry]:
     K = EntryKind.COMPOSITE
     return [
         Entry(
+            "ind.elephant-zones",
+            K,
+            "Elephant Zones",
+            "Session-open percentile S/R bands with outer-buffer stops.",
+            family="family.support-resistance",
+            concepts=("concept.elephant-zones", "concept.support-resistance"),
+            depends_on=("ind.atr", "prim.outer-buffer-stop"),
+            params=_ez_params(),
+            outputs=_EZ_OUT,
+            provenance=_ZONES_PROV,
+            factory=lambda p: ad.from_dataclass(
+                _ez(p),
+                ("s2", "s1", "r1", "r2", "half_width", "long_outer_sl", "short_outer_sl"),
+            ),
+        ),
+        Entry(
+            "ind.opening-range",
+            K,
+            "Opening Range",
+            "High, low and mid of the first bars of each session (zero lookahead).",
+            family="family.price-action",
+            concepts=("concept.opening-range",),
+            depends_on=("ind.atr",),
+            params=_or_params(),
+            outputs=_OR_OUT,
+            provenance=_ZONES_PROV,
+            factory=lambda p: ad.from_dataclass(_orng(p), ("or_high", "or_low", "or_mid")),
+        ),
+        Entry(
             "ind.predictive-ranges",
             K,
             "Predictive Ranges",
@@ -672,6 +827,44 @@ def _detectors() -> list[Entry]:
         )
 
     return [
+        Entry(
+            "det.ee-sweep",
+            K,
+            "Elephant Zone Sweep",
+            "Wick through the s1/r1 band that closes back inside.",
+            family="family.support-resistance",
+            concepts=("concept.elephant-zones", "concept.support-resistance"),
+            depends_on=("ind.elephant-zones",),
+            params=_ez_params(),
+            outputs=_outs(
+                ("bull_sweep", _EVENT, "low pierced the s1 band, close back above its low edge"),
+                ("bear_sweep", _EVENT, "high pierced the r1 band, close back below its high edge"),
+                ("level", _PRICE, "swept level (s1 or r1)"),
+            ),
+            provenance=_ZONES_PROV,
+            factory=lambda p: ad.from_dataclass(
+                EeSweep(_ez(p)), ("bull_sweep", "bear_sweep", "level")
+            ),
+        ),
+        Entry(
+            "det.orb15-breakout",
+            K,
+            "ORB-15 Breakout",
+            "First close beyond the opening range per session, once per side.",
+            family="family.price-action",
+            concepts=("concept.opening-range", "concept.breakout"),
+            depends_on=("ind.opening-range",),
+            params=_or_params(),
+            outputs=_outs(
+                ("break_up", _EVENT, "first close above or_high this session"),
+                ("break_down", _EVENT, "first close below or_low this session"),
+                ("level", _PRICE, "broken range edge"),
+            ),
+            provenance=_ZONES_PROV,
+            factory=lambda p: ad.from_dataclass(
+                Orb15Breakout(_orng(p)), ("break_up", "break_down", "level")
+            ),
+        ),
         e(
             "det.pr-center-step",
             "Predictive Ranges Center Step",
@@ -855,7 +1048,14 @@ def build_default_registry() -> Registry:
                 body_md=_concept_body(slug),
             )
         )
-    for entry in (*_prims(), *_indicators(), *_composites(), *_detectors(), *_recipes()):
+    for entry in (
+        _outer_buffer_stop(),
+        *_prims(),
+        *_indicators(),
+        *_composites(),
+        *_detectors(),
+        *_recipes(),
+    ):
         reg.register(entry)
     reg.validate()
     return reg
