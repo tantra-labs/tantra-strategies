@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -101,25 +102,31 @@ def test_env_selection_prefers_lakehouse(tmp_path: Path) -> None:
     assert isinstance(bar_source_from_env(both), LakehouseBarSource)
 
 
-def test_mcp_signal_study_reads_from_the_lakehouse_source() -> None:
-    server = LibraryMcpServer(bar_source=LakehouseBarSource(Path("/x"), reader=_FakeReader()))
+def test_mcp_indicator_compute_reads_from_the_lakehouse_source() -> None:
+    reader = _FakeReader()
+    server = LibraryMcpServer(bar_source=LakehouseBarSource(Path("/x"), reader=reader))
     reply = server.handle(
         {
             "jsonrpc": "2.0",
             "id": 1,
             "method": "tools/call",
             "params": {
-                "name": "tantra_library_compute",
+                "name": "tantra_indicator_compute",
                 "arguments": {
                     "id": "ind.atr",
                     "params": {"period": 2},
                     "instrument": "NSE:RELIANCE-EQ",
-                    "bars_file": "main",
+                    "bars_file": "pin-1",
                 },
             },
         }
     )
-    assert reply is not None and "error" not in reply, reply
+    assert reply is not None
+    result = reply["result"]
+    assert isinstance(result, dict) and result["isError"] is False, result
+    body = json.loads(result["content"][0]["text"])
+    assert body["total_rows"] == 3
+    assert reader.calls == [("NSE:RELIANCE-EQ", "1d", "pin-1")]
 
 
 def test_real_tantra_data_lakehouse_end_to_end(tmp_path: Path) -> None:
