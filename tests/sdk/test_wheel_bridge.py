@@ -159,3 +159,14 @@ def test_scene_before_start_is_empty_and_after_start_delegates() -> None:
     bridge.start()
     assert bridge.emit_scene().strategy_id == "scripted"
     bridge.stop()
+
+
+def test_engine_epoch_nanosecond_timestamps_are_coerced_to_utc() -> None:
+    """The wheel engine stamps bars with int epoch-ns; the bridge must not parse them as ISO."""
+    from tantra_strategies.sdk.wheel_bridge import _coerce_datetime
+
+    when = dt.datetime(2026, 5, 4, 3, 45, 7, 123456, tzinfo=dt.UTC)
+    ns = int(when.replace(microsecond=0).timestamp()) * 1_000_000_000 + 123_456_789
+    assert _coerce_datetime(ns) == when
+    assert _coerce_datetime(when) is when
+    assert _coerce_datetime("2026-05-04T03:45:07+00:00") == when.replace(microsecond=0)

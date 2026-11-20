@@ -51,8 +51,18 @@ def _as_sdk_instrument(symbol: str, exchange: str) -> str:
 
 
 def _coerce_datetime(ts: object) -> dt.datetime:
+    """Normalise a wheel bar timestamp to an aware UTC ``datetime``.
+
+    The wheel engine (``tantra_examples`` ``StrategyRunner``) stamps bars with integer
+    epoch nanoseconds; hand-built bars may carry a ``datetime`` or an ISO-8601 string.
+    """
     if isinstance(ts, dt.datetime):
         return ts
+    if isinstance(ts, int) and not isinstance(ts, bool):
+        seconds, nanos = divmod(ts, 1_000_000_000)
+        return dt.datetime.fromtimestamp(seconds, tz=dt.UTC) + dt.timedelta(
+            microseconds=nanos // 1_000
+        )
     return dt.datetime.fromisoformat(str(ts))
 
 

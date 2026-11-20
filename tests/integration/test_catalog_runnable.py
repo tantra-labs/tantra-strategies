@@ -18,6 +18,7 @@ import importlib.util
 import json
 import sys
 import tomllib
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -288,5 +289,66 @@ def test_pr_steps_run_on_the_wheel_ledger(
         # deterministic wavy series triggers at least one breakout entry
         assert intents
         assert all(intent.quantity > 0 for intent in intents)
-    # pr_trend_pullback: no entry on this series; the no-error + scene path is the contract.
+    # pr_trend_pullback: no entry on this series (its 0.5-wick bars can never print a
+    # strictly-lower reversal low); the full entry path is pinned by the engine test below.
     strategy.on_stop()
+
+
+def _pullback_bars() -> list[object]:
+    """One NSE session of 1m bars: an up-trend with sine pullbacks.
+
+    The first up bar after a down leg carries a 2-point hammer wick, so the
+    ``ReversalBars`` low prints strictly below the prior lows inside the PR S1 zone.
+    """
+    import math
+
+    from tantra.bar import Bar as WheelBar
+    from tantra.instrument import InstrumentId
+
+    iid = InstrumentId("NIFTY50-INDEX", "NSE")
+    open_ns = int(dt.datetime(2026, 5, 4, 3, 45, tzinfo=dt.UTC).timestamp()) * 1_000_000_000
+    half, hammer = Decimal("0.5"), Decimal(2)
+    closes = [
+        Decimal(100) + Decimal("0.4") * i + Decimal(str(round(4 * math.sin(i / 9), 2)))
+        for i in range(60)
+    ]
+    bars: list[object] = []
+    prev, prev_up = closes[0], True
+    for i, close in enumerate(closes):
+        up = close > prev
+        low = min(prev, close) - half - (hammer if up and not prev_up else 0)
+        ts = open_ns + i * 60_000_000_000
+        bars.append(WheelBar(iid, ts, prev, max(prev, close) + half, low, close, 100_000))
+        prev, prev_up = close, up
+    return bars
+
+
+def test_pr_trend_pullback_enters_and_exits_through_the_wheel_engine() -> None:
+    """End-to-end: PR regime + S1 touch + reversal bar -> filled long -> bracket target exit."""
+    pytest.importorskip("tantra_examples.backtest")
+    from tantra_examples.backtest import run_portfolio_backtest
+
+    strategy = _load_named("pr_trend_pullback").instantiate()
+    strategy.length, strategy.factor = 20, "1"
+    day = dt.date(2026, 5, 4)
+    run = run_portfolio_backtest(
+        strategy, _pullback_bars(), test_start=day, test_end=day, capital_minor=100_000_000
+    )
+
+    assert run.rejections == 0
+    assert [(f.side, f.quantity) for f in run.fills] == [
+        ("buy", Decimal(1)),
+        ("sell", Decimal(1)),
+    ]
+    entry, exit_ = run.fills
+    assert entry.price == Decimal("111.28")  # next-open fill after the reversal trigger
+    assert exit_.price > entry.price  # bracket target leg, not the stop
+    assert run.final_positions == {}
+
+    scene = strategy.emit_scene().to_dict()
+    assert [(s["kind"], s["index"]) for s in scene["signals"]] == [
+        ("retest", 35),
+        ("target_hit", 36),
+    ]
+    assert {stop["kind"] for stop in scene["stops"]} == {"initial", "target"}
+    assert scene["hints"][0]["title"] == "PR pullback long"
