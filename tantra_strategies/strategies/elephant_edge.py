@@ -1,36 +1,30 @@
-"""Elephant Edge (EE+) — institutional intraday level-fusion strategy.
+"""Elephant Edge (EE+) — multi-horizon level-fusion & outer-buffer strategy.
 
-Implements plan `docs/plans/0001-elephant-edge-strategy.md` on the pure-Python
-strategy SDK. EE+ builds the day's **level map** at the session open (first
-1-minute bar of the IST session) and re-scores it every 5 bars, fusing:
+Implements plan `docs/plans/0001-elephant-edge-strategy.md` and Phase 2
+(`Track T21.2`) generalization on the pure-Python strategy SDK. EE+ composes:
 
-* price-derived **Elephant percentile zones** (`ELEPHANT_SUPPORT_1..2`,
-  `ELEPHANT_RESISTANCE_1..2`), with an honest **price-action fallback** when
-  the context has no level feed (``LevelsUnavailable``),
-* **option-chain** levels when a seeded/live snapshot is available: OI walls
-  (``OiWallCall`` / ``OiWallPut``), a gamma-flip proxy, gamma walls, and
-  max-pain, with Elephant zones **snapped** to a nearby OI strike wall,
-* **round-number** levels and **previous-day OHLC** (PDH/PDL/PDC) when
-  derivable from the run.
-
-Every level receives a **0-4 confluence score** (OI-wall / PDH-PDL / gamma-wall
-/ order-block overlap, the required ΔOI dynamic, Local-Range PCR tilt, and the
-dealer-gamma regime **or** the Mid-Month (15th ± 1 day) institutional reversal
-gate). Levels scoring below `min_level_score` are not tradeable.
-
-Signals are emitted only when every §3 gate holds on the same bar (entry
-window, trade budget, trigger candle, volume, Plus-Two breakout confirmation,
-ΔOI trap filter, one-position-per-instrument). Every signal attaches a
-`StopProtection`: SL beyond the level band + `sl_buffer_atr` x ATR, a 3R partial
-booking with breakeven trail, a 5R runner target managed by the trailing stop,
-an ATR/swing/off trailing mode activated after `activation_after_r`, and the
-6-candle stagnation time-stop. Positions are sized from the account risk budget
-rounded down to whole lots and capped by `max_position_fraction` notional.
+* :class:`~tantra_strategies.sdk.primitives.SessionClock` — supports intraday
+  (NSE equity/F&O & MCX extended sessions), weekly expiry, monthly expiry,
+  and commodity-cycle horizons via ``horizon_mode`` and ``asset_class``.
+* :class:`~tantra_strategies.sdk.primitives.ElephantZonesExtractor` — builds
+  Empirical support/resistance percentile bands (with 1.618x/2.618x ORE
+  fallback), round-number levels, PDH/PDL/PDC, and optional OI/gamma snapping.
+* ``entry_trigger_mode`` — ``"all"`` (default backwards-compatible reversals +
+  breakouts + retests), ``"rejection_wick"`` (pinbars/hammers/shooting-stars/
+  engulfings only), or ``"zone_touch_close"`` (clean zone touch-and-close bars).
+* :class:`~tantra_strategies.sdk.primitives.OuterBufferStopPolicy` — configurable
+  ``sl_mode`` (`tight_center` | `outer_edge` | `outer_atr_buffer` |
+  `percentile_shield`) plus 3R partial booking + breakeven trail + 5R runner
+  + 6-candle stagnation exit.
+* :class:`~tantra_strategies.sdk.primitives.HedgeOverlayPolicy` — synthesizes
+  Day/Weekly/Monthly/Commodity F&O hedge structures (or live-chain strikes) per
+  ``hedge_mode``.
+* :class:`~tantra_strategies.sdk.scene.OverlaySceneEmitter` — automatically
+  emits the 6-layer ``OverlayScene`` (signals, bands, stops, indicators, hints,
+  hedges) alongside ``OrderRequest`` and ``StopProtection``.
 
 Zero floats throughout: every price, stop, band, target, and quantity is an
-exact ``Decimal``. The strategy degrades honestly (``LevelsUnavailable`` /
-``OptionsUnavailable`` from ``tantra-market`` gap 0005 / ``tantra-data`` gap
-0016) to the price-action fallback when stores are unseeded.
+exact ``Decimal``.
 """
 
 from __future__ import annotations
@@ -42,12 +36,23 @@ from itertools import pairwise
 from typing import Any
 
 from tantra_strategies.sdk import (
+    AssetClass,
     Bar,
+    ElephantZonesExtractor,
+    EntryTriggerMode,
+    HedgeMode,
+    HedgeOverlayPolicy,
+    HedgeRecommendationSpec,
+    HintMetricSpec,
+    HintSeverity,
+    HorizonMode,
     Level,
     LevelKind,
     LevelMap,
     LevelSide,
     LevelsUnavailable,
+    MarkerKind,
+    MarkerSide,
     OptionsSnapshot,
     OptionsUnavailable,
     OrderEvent,
@@ -55,15 +60,24 @@ from tantra_strategies.sdk import (
     OrderSide,
     OrderStatus,
     OrderType,
+    OuterBufferStopPolicy,
+    OverlayScene,
+    OverlaySceneEmitter,
     Parameter,
     PositionIntent,
+    SessionClock,
     SignalKind,
+    SlMode,
+    StopKind,
+    StopPlan,
     StopProtection,
     StopUpdate,
     Strategy,
     StrategyContext,
     StrategySignal,
     TrailMode,
+    ZoneExtractionContext,
+    ZoneExtractor,
 )
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -182,15 +196,18 @@ class _PositionState:
     lowest_close: Decimal
     bars_since_entry: int = 0
     partial_done: bool = False
+    entry_bar_index: int = 0
+    tight_sl: Decimal = Decimal(0)
 
 
 class ElephantEdgeStrategy(Strategy):
-    """EE+ intraday strategy: level fusion + confluence score + risk-managed entry.
+    """EE+ strategy: composable level fusion, outer-buffer SL, hedges & scene emission.
 
-    Declarative parameters mirror plan §6. Run against ``SimulatedContext``
-    (seed level/option stores for deterministic tests) or ``LiveContext``; the
-    level map honestly degrades to the price-action fallback when no feed is
-    wired.
+    Declarative parameters preserve plan §6 defaults while adding Phase 2
+    (`Track T21.2`) generalization knobs: ``horizon_mode``,
+    ``entry_trigger_mode``, ``sl_mode``, ``hedge_mode``, and ``asset_class``.
+    Run against ``SimulatedContext`` or ``LiveContext``; feeds degrade honestly
+    to price-action / theoretical fallbacks when unseeded.
     """
 
     # -- plan §6 declarative parameters --------------------------------------
@@ -219,21 +236,43 @@ class ElephantEdgeStrategy(Strategy):
     trail_mode = Parameter(default="atr")
     trail_atr_mult = Parameter(default="2.0", min="1.0", max="5.0", step="0.5")
     activation_after_r = Parameter(default="1.0", min="0.5", max="3.0", step="0.5")
-    sl_buffer_atr = Parameter(default="0.25", min="0.1", max="1.0", step="0.05")
+    sl_buffer_atr = Parameter(default="0.25", min="0.0", max="1.0", step="0.05")
     min_sl_atr = Parameter(default="0.5", min="0.2", max="3.0", step="0.1")
     volume_mult = Parameter(default="1.5", min="1.0", max="5.0", step="0.1")
     body_ratio_breakout = Parameter(default="0.6", min="0.5", max="0.9", step="0.05")
     alternate_mode = Parameter(default=False)
-    # Sizing surfaces (not exposed by the SDK context; plan §5).
     account_equity = Parameter(default="1000000", min="1000", max="10000000000", step="1")
     lot_size = Parameter(default="1", min="1", max="100000", step="1")
 
+    # -- Phase 2 (Track T21.2) generalized multi-horizon & primitive knobs ---
+    horizon_mode = Parameter(default="intraday")
+    entry_trigger_mode = Parameter(default="all")
+    sl_mode = Parameter(default="outer_atr_buffer")
+    hedge_mode = Parameter(default="auto")
+    asset_class = Parameter(default="index")
+    timeframe = Parameter(default="1m")
+    percentile_shield_atr = Parameter(default="0.50", min="0.10", max="1.50", step="0.05")
+    zone_round_step = Parameter(default="50", min="1", max="5000", step="1")
+
     def __init__(self, **overrides: object) -> None:
+        self._explicit_entry_window = "entry_window" in overrides
+        self._explicit_square_off = "square_off_time" in overrides
+        custom_zone_extractor = overrides.pop("zone_extractor", None)
+        custom_stop_policy = overrides.pop("stop_policy", None)
+        custom_hedge_policy = overrides.pop("hedge_policy", None)
+
         super().__init__(**overrides)
         self._instrument = str(self.instrument)
+        self._horizon_enum = HorizonMode(str(self.horizon_mode))
+        self._trigger_enum = EntryTriggerMode(str(self.entry_trigger_mode))
+        self._sl_enum = SlMode(str(self.sl_mode))
+        self._hedge_enum = HedgeMode(str(self.hedge_mode))
+        self._asset_enum = AssetClass(str(self.asset_class))
+
         self._bars: list[Bar] = []
         self._volume_series: list[Decimal] = []
         self._session_date: Any = None
+        self._session_start_index = 0
         self._session_bars: list[Bar] = []
         self._session_bar_count = 0
         self._session_open = Decimal(0)
@@ -251,13 +290,57 @@ class ElephantEdgeStrategy(Strategy):
         self._broken_levels: dict[str, OrderSide] = {}
         self._position_state: dict[str, _PositionState] = {}
         self._pending_entry_stop: StopProtection | None = None
+        self._pending_entry_plan: StopPlan | None = None
         self.signal_log: list[StrategySignal] = []
         self.position_intent_log: list[PositionIntent] = []
         self.trail_log: list[StopUpdate] = []
+        self.hedge_log: list[HedgeRecommendationSpec] = []
+
+        self.zone_extractor: ZoneExtractor = (
+            custom_zone_extractor
+            if isinstance(custom_zone_extractor, ZoneExtractor)
+            else ElephantZonesExtractor(
+                support_percentiles=tuple(self.elephant_support_percentiles),
+                resistance_percentiles=tuple(self.elephant_resistance_percentiles),
+                round_step=str(self.zone_round_step),
+                use_pdh_pdl=bool(self.use_pdh_pdl),
+            )
+        )
+        self.stop_policy: OuterBufferStopPolicy = (
+            custom_stop_policy
+            if isinstance(custom_stop_policy, OuterBufferStopPolicy)
+            else OuterBufferStopPolicy(
+                sl_mode=self._sl_enum,
+                buffer_atr=str(self.sl_buffer_atr),
+                percentile_atr=str(self.percentile_shield_atr),
+                target_r1=str(self.target_r1),
+                target_r2=str(self.target_r2),
+                trail_mode=TrailMode(str(self.trail_mode)),
+                trail_atr_mult=str(self.trail_atr_mult),
+                activation_after_r=str(self.activation_after_r),
+                max_stagnant_bars=int(self.max_stagnant_bars),
+            )
+        )
+        self.hedge_policy: HedgeOverlayPolicy = (
+            custom_hedge_policy
+            if isinstance(custom_hedge_policy, HedgeOverlayPolicy)
+            else HedgeOverlayPolicy()
+        )
+        self.scene_emitter = OverlaySceneEmitter(
+            strategy_id="elephant_edge_v3",
+            symbol=self._instrument,
+            timeframe=str(self.timeframe),
+        )
 
     # -- lifecycle ------------------------------------------------------------
     def on_start(self) -> None:
         self._instrument = str(self.instrument)
+        self._horizon_enum = HorizonMode(str(self.horizon_mode))
+        self._trigger_enum = EntryTriggerMode(str(self.entry_trigger_mode))
+        self._sl_enum = SlMode(str(self.sl_mode))
+        self._hedge_enum = HedgeMode(str(self.hedge_mode))
+        self._asset_enum = AssetClass(str(self.asset_class))
+        self.scene_emitter.reset(symbol=self._instrument, timeframe=str(self.timeframe))
         self.indicators.atr(self._instrument, 14)
 
     def on_bar(self, bar: Bar) -> None:
@@ -274,8 +357,6 @@ class ElephantEdgeStrategy(Strategy):
         if event.status is not OrderStatus.COMPLETE or event.filled_quantity <= 0:
             return
         if self._pending_entry_stop is not None:
-            # The next fill after a signal is always the entry (orders fill
-            # synchronously in the sim harness; market orders never rest).
             self._record_entry(event)
             return
         state = self._position_state.get(self._instrument)
@@ -296,20 +377,42 @@ class ElephantEdgeStrategy(Strategy):
     def context(self) -> StrategyContext:
         return self._require_context()
 
+    def emit_scene(self) -> OverlayScene:
+        """Return the immutable 6-layer ``OverlayScene`` accumulated during the run."""
+        return self.scene_emitter.emit()
+
+    def scene_dict(self) -> dict[str, Any]:
+        """Serialize the accumulated 6-layer scene matching ``tantra-ui-charts`` JSON."""
+        return self.scene_emitter.to_dict()
+
     # -- session / bar plumbing ----------------------------------------------
+    def _current_bar_index(self) -> int:
+        return max(0, len(self._bars) - 1)
+
     def _ingest(self, bar: Bar) -> None:
         self._bars.append(bar)
+        bar_idx = self._current_bar_index()
         self._volume_series.append(Decimal(bar.volume))
-        self.indicators.atr(self._instrument, 14).update(bar)
+        atr_ind = self.indicators.atr(self._instrument, 14)
+        atr_ind.update(bar)
+        if atr_ind.ready:
+            self.scene_emitter.record_indicator_point("ATR(14)", bar_idx, atr_ind.value)
         self._update_session(bar)
 
+    def _session_key_for(self, bar: Bar) -> Any:
+        if self._horizon_enum is HorizonMode.INTRADAY:
+            return _ist_datetime(bar.ts).date()
+        return SessionClock.session_key(bar.ts, self._horizon_enum, self._asset_enum)
+
     def _update_session(self, bar: Bar) -> None:
-        day = _ist_datetime(bar.ts).date()
-        if self._session_date is not None and day != self._session_date:
+        session_key = self._session_key_for(bar)
+        bar_idx = self._current_bar_index()
+        if self._session_date is not None and session_key != self._session_date:
             self._completed_sessions[self._session_date] = self._session_bars
             self._session_date = None
         if self._session_date is None:
-            self._session_date = day
+            self._session_date = session_key
+            self._session_start_index = bar_idx
             self._session_bars = [bar]
             self._session_bar_count = 1
             self._session_open = bar.open
@@ -327,7 +430,7 @@ class ElephantEdgeStrategy(Strategy):
         self._session_bar_count += 1
         self._low_min = min(self._low_min, bar.low)
         self._high_max = max(self._high_max, bar.high)
-        if self._session_bar_count % 5 == 0:
+        if self._session_bar_count % 5 == 0 or self._horizon_enum is not HorizonMode.INTRADAY:
             self._build_level_map(bar)
 
     @staticmethod
@@ -338,8 +441,21 @@ class ElephantEdgeStrategy(Strategy):
     def _ist_date(bar: Bar) -> Any:
         return _ist_datetime(bar.ts).date()
 
+    def _effective_entry_window(self) -> tuple[str, str]:
+        if self._explicit_entry_window:
+            start, end = self.entry_window
+            return str(start), str(end)
+        return SessionClock.default_entry_window(self._asset_enum)
+
+    def _effective_square_off_str(self) -> str:
+        if self._explicit_square_off:
+            return str(self.square_off_time)
+        return SessionClock.default_square_off_time(self._asset_enum)
+
     def _in_entry_window(self, bar: Bar) -> bool:
-        start, end = self.entry_window
+        if self._horizon_enum is not HorizonMode.INTRADAY:
+            return True
+        start, end = self._effective_entry_window()
         t = self._ist_time(bar)
         return _parse_time(start) <= t <= _parse_time(end)
 
@@ -348,11 +464,15 @@ class ElephantEdgeStrategy(Strategy):
         return value.hour * 60 + value.minute
 
     def _near_square_off(self, bar: Bar) -> bool:
+        if not self._explicit_square_off and not SessionClock.is_intraday_square_off_enabled(
+            self._horizon_enum
+        ):
+            return False
         minutes = self._time_minutes(self._ist_time(bar))
         return minutes >= self._time_minutes(self._square_off_time()) - 30
 
     def _square_off_time(self) -> time:
-        return _parse_time(str(self.square_off_time))
+        return _parse_time(self._effective_square_off_str())
 
     def _atr_value(self) -> Decimal | None:
         indicator = self.indicators.atr(self._instrument, 14)
@@ -400,6 +520,13 @@ class ElephantEdgeStrategy(Strategy):
             )
         self._level_map = LevelMap(instrument=self._instrument, levels=tuple(scored), as_of=bar.ts)
         self._levels_by_id = {lvl.level_id: lvl for lvl in scored}
+        self.zone_extractor.populate_scene(
+            self.scene_emitter,
+            self._level_map,
+            self._session_start_index,
+            self._current_bar_index(),
+            equilibrium=self._session_open if self._session_open > 0 else None,
+        )
 
     def _band_half_width(self, strike: Decimal | None = None) -> Decimal:
         atr = self._atr_value()
@@ -415,6 +542,21 @@ class ElephantEdgeStrategy(Strategy):
 
     # -- price-action fallback level map -------------------------------------
     def _fallback_level_map(self, bar: Bar) -> LevelMap:
+        if not isinstance(self.zone_extractor, ElephantZonesExtractor):
+            ctx = ZoneExtractionContext(
+                instrument=self._instrument,
+                bar=bar,
+                bar_index=self._current_bar_index(),
+                session_open=self._session_open,
+                session_bars=tuple(self._session_bars),
+                completed_sessions=tuple(
+                    (k, tuple(v)) for k, v in self._completed_sessions.items()
+                ),
+                atr=self._atr_value(),
+                snapshot=self._options_snapshot(),
+            )
+            return self.zone_extractor.extract(ctx)
+
         first = self._first_bar
         if first is None:
             first = bar
@@ -475,7 +617,7 @@ class ElephantEdgeStrategy(Strategy):
         return LevelMap(instrument=self._instrument, levels=tuple(levels), as_of=bar.ts)
 
     def _round_levels(self, price: Decimal) -> set[Decimal]:
-        step = Decimal("50")
+        step = Decimal(str(self.zone_round_step))
         below = (price / step).to_integral_value(rounding=ROUND_FLOOR) * step
         return {below, below + step}
 
@@ -753,7 +895,7 @@ class ElephantEdgeStrategy(Strategy):
         pending: dict[str, dict[str, Any]] = {}
         for level_id, entry in self._pending_breakouts.items():
             if not self._sustains_breakout(bar, entry["band"], entry["side"]):
-                continue  # fakeout: dropped
+                continue
             entry["follow_through"] = int(entry["follow_through"]) + 1
             if entry["follow_through"] >= int(self.confirm_bars_breakout):
                 self._emit_signal(bar, entry["level"], SignalKind.BREAKOUT, entry["side"])
@@ -788,14 +930,23 @@ class ElephantEdgeStrategy(Strategy):
         rng = bar.high - bar.low
         if rng < Decimal("0.2") * atr or rng > Decimal("4") * atr:
             return None, None
-        if level.side in (LevelSide.SUPPORT, LevelSide.BOTH) and bar.low <= band_high:
-            prev = self._session_bars[-2] if len(self._session_bars) >= 2 else None
-            if _is_hammer(bar) or (prev is not None and _is_bullish_engulfing(bar, prev)):
-                return SignalKind.REVERSAL, OrderSide.BUY
-        if level.side in (LevelSide.RESISTANCE, LevelSide.BOTH) and bar.high >= band_low:
-            prev = self._session_bars[-2] if len(self._session_bars) >= 2 else None
-            if _is_shooting_star(bar) or (prev is not None and _is_bearish_engulfing(bar, prev)):
-                return SignalKind.REVERSAL, OrderSide.SELL
+        prev = self._session_bars[-2] if len(self._session_bars) >= 2 else None
+        if (
+            level.side in (LevelSide.SUPPORT, LevelSide.BOTH)
+            and bar.low <= band_high
+            and (_is_hammer(bar) or (prev is not None and _is_bullish_engulfing(bar, prev)))
+        ):
+            return SignalKind.REVERSAL, OrderSide.BUY
+        if (
+            level.side in (LevelSide.RESISTANCE, LevelSide.BOTH)
+            and bar.high >= band_low
+            and (_is_shooting_star(bar) or (prev is not None and _is_bearish_engulfing(bar, prev)))
+        ):
+            return SignalKind.REVERSAL, OrderSide.SELL
+
+        if self._trigger_enum is EntryTriggerMode.REJECTION_WICK:
+            return None, None
+
         body_ratio = Decimal(str(self.body_ratio_breakout))
         if (
             bar.close > band_high
@@ -817,6 +968,23 @@ class ElephantEdgeStrategy(Strategy):
             and _is_hold(bar)
         ):
             return SignalKind.RETEST, self._broken_levels[level.level_id]
+
+        if self._trigger_enum is EntryTriggerMode.ZONE_TOUCH_CLOSE:
+            if (
+                level.side in (LevelSide.SUPPORT, LevelSide.BOTH)
+                and bar.low <= band_high
+                and bar.close >= band_low
+                and bar.close > bar.open
+            ):
+                return SignalKind.REVERSAL, OrderSide.BUY
+            if (
+                level.side in (LevelSide.RESISTANCE, LevelSide.BOTH)
+                and bar.high >= band_low
+                and bar.close <= band_high
+                and bar.close < bar.open
+            ):
+                return SignalKind.REVERSAL, OrderSide.SELL
+
         return None, None
 
     def _delta_oi_ok(
@@ -837,10 +1005,51 @@ class ElephantEdgeStrategy(Strategy):
             return change > 0
         return change < 0
 
+    def _compute_sl_plan(
+        self, entry: Decimal, side: OrderSide, level: Level, atr: Decimal
+    ) -> StopPlan | None:
+        band = level.band()
+        if self._sl_enum is SlMode.OUTER_ATR_BUFFER:
+            buffer = Decimal(str(self.sl_buffer_atr)) * atr
+            try:
+                stop = self.stop_loss(side, band, buffer)
+            except ValueError:
+                return None
+            sl = stop.sl
+            tight_anchor = (band[0] + band[1]) / Decimal(2)
+            tight_sl = (
+                min(entry - Decimal("0.15") * atr, tight_anchor)
+                if side is OrderSide.BUY
+                else max(entry + Decimal("0.15") * atr, tight_anchor)
+            )
+            one_r = abs(entry - sl)
+            r1 = self._target_price(entry, side, Decimal(str(self.target_r1)), one_r)
+            r2 = self._target_price(entry, side, Decimal(str(self.target_r2)), one_r)
+            prot = StopProtection(
+                sl=sl,
+                trail=TrailMode(str(self.trail_mode)),
+                trail_distance=Decimal(str(self.trail_atr_mult)),
+                activation_after_r=Decimal(str(self.activation_after_r)),
+            )
+            return StopPlan(
+                sl=sl,
+                tight_sl=max(Decimal("0.05"), tight_sl),
+                outer_sl=sl,
+                one_r=one_r,
+                target_r1=r1,
+                target_r2=r2,
+                stop_protection=prot,
+                saved_cushion=max(Decimal(0), abs(sl - tight_sl)),
+            )
+        try:
+            return self.stop_policy.compute_plan(entry=entry, side=side, level_band=band, atr=atr)
+        except ValueError:
+            return None
+
     def _emit_signal(
         self, bar: Bar, level: Level, kind: SignalKind, side: OrderSide
     ) -> StrategySignal | None:
-        """Validate every §3 gate, size the position, and submit the entry order."""
+        """Validate every §3 gate, size the position, emit scene + hedge, submit entry."""
         if self._position_state.get(self._instrument) is not None:
             return None
         if self._trades_today >= int(self.max_trades_per_day):
@@ -861,14 +1070,13 @@ class ElephantEdgeStrategy(Strategy):
             and side is self._last_trade_side
         ):
             return None
-        buffer = Decimal(str(self.sl_buffer_atr)) * atr
-        try:
-            stop = self.stop_loss(side, level.band(), buffer)
-        except ValueError:
-            return None
-        sl = stop.sl
+
         entry = bar.close
-        one_r = abs(entry - sl)
+        plan = self._compute_sl_plan(entry, side, level, atr)
+        if plan is None:
+            return None
+        sl = plan.sl
+        one_r = plan.one_r
         if one_r <= 0 or one_r < Decimal(str(self.min_sl_atr)) * atr:
             return None
         if Decimal(2) * one_r > self._expected_move(atr):
@@ -876,6 +1084,7 @@ class ElephantEdgeStrategy(Strategy):
         quantity = self._position_size(entry, one_r)
         if quantity <= 0:
             return None
+
         quality = self._trigger_quality(bar, kind)
         confidence = min(Decimal(level.score) * quality, Decimal(100))
         signal = StrategySignal(
@@ -885,7 +1094,7 @@ class ElephantEdgeStrategy(Strategy):
             ref_levels=(level.level_id,),
             confidence=confidence,
         )
-        r2 = self._target_price(entry, side, Decimal(str(self.target_r2)), one_r)
+        r2 = plan.target_r2
         intent = PositionIntent(
             instrument=self._instrument,
             side=side,
@@ -899,8 +1108,6 @@ class ElephantEdgeStrategy(Strategy):
         self.position_intent_log.append(intent)
         self._trades_today += 1
         self._traded_levels.add(level.level_id)
-        # One position per level *zone*: mark every overlapping level traded so a
-        # snapped Elephant / OI-wall pair cannot re-enter the same zone twice.
         if self._level_map is not None:
             for other in self._level_map.levels:
                 if other.level_id != level.level_id and self._bands_overlap(
@@ -908,16 +1115,63 @@ class ElephantEdgeStrategy(Strategy):
                 ):
                     self._traded_levels.add(other.level_id)
         self._last_trade_side = side
-        trail_mode = TrailMode(str(self.trail_mode))
-        self._pending_entry_stop = StopProtection(
-            sl=sl,
-            trail=trail_mode,
-            trail_distance=Decimal(str(self.trail_atr_mult)),
-            activation_after_r=Decimal(str(self.activation_after_r)),
+
+        bar_idx = self._current_bar_index()
+        marker_side = MarkerSide.BUY if side is OrderSide.BUY else MarkerSide.SELL
+        marker_kind = MarkerKind(kind.value)
+        tight_probed = (
+            bar.low <= plan.tight_sl if side is OrderSide.BUY else bar.high >= plan.tight_sl
         )
+        if self._sl_enum in (SlMode.OUTER_ATR_BUFFER, SlMode.PERCENTILE_SHIELD) and tight_probed:
+            self.scene_emitter.add_signal(entry, bar_idx, marker_side, MarkerKind.SWEEP_SAVED)
+            self.scene_emitter.add_hint(
+                bar_idx,
+                entry,
+                HintSeverity.POSITIVE,
+                "Outer-SL Shield Active",
+                f"Tight SL {plan.tight_sl} probed on entry candle while outer SL {sl} held.",
+                metrics=(
+                    HintMetricSpec("Level", level.level_id),
+                    HintMetricSpec("Tight SL", str(plan.tight_sl)),
+                    HintMetricSpec("Outer SL", str(sl)),
+                ),
+            )
+        else:
+            self.scene_emitter.add_signal(entry, bar_idx, marker_side, marker_kind)
+            self.scene_emitter.add_hint(
+                bar_idx,
+                entry,
+                HintSeverity.INFO,
+                f"EE+ {kind.value.title()} @ {level.level_id}",
+                f"Score {level.score}/4, sl_mode={self._sl_enum.value}, SL={sl}, 5R={r2}",
+                metrics=(
+                    HintMetricSpec("Confidence", str(confidence)),
+                    HintMetricSpec("1R", str(one_r)),
+                    HintMetricSpec("SL", str(sl)),
+                ),
+            )
+        self.stop_policy.emit_stop_lines(self.scene_emitter, plan, bar_idx, bar_idx)
+
+        hedge = self.hedge_policy.synthesize(
+            spot=entry,
+            atr=atr,
+            side=side,
+            level_map=self._level_map,
+            horizon_mode=self._horizon_enum,
+            hedge_mode=self._hedge_enum,
+            lot_size=str(self.lot_size),
+            snapshot=snapshot,
+        )
+        if hedge is not None:
+            self.hedge_log.append(hedge)
+            self.hedge_policy.emit_to_scene(self.scene_emitter, hedge, bar_idx, bar_idx)
+
+        self._pending_entry_stop = plan.stop_protection
+        self._pending_entry_plan = plan
         tag = "ee.entry.long" if side is OrderSide.BUY else "ee.entry.short"
         self._submit_order(side, quantity, tag)
-        self._pending_entry_stop = None  # safety: consumed synchronously by _record_entry
+        self._pending_entry_stop = None
+        self._pending_entry_plan = None
         return signal
 
     @staticmethod
@@ -996,6 +1250,7 @@ class ElephantEdgeStrategy(Strategy):
         atr = self._atr_value() or Decimal("1")
         r1 = self._target_price(entry, side, Decimal(str(self.target_r1)), one_r)
         r2 = self._target_price(entry, side, Decimal(str(self.target_r2)), one_r)
+        plan = self._pending_entry_plan
         self._position_state[self._instrument] = _PositionState(
             instrument=self._instrument,
             side=side,
@@ -1010,8 +1265,11 @@ class ElephantEdgeStrategy(Strategy):
             r2_price=r2,
             highest_close=max(entry, event.price) if event.price is not None else entry,
             lowest_close=min(entry, event.price) if event.price is not None else entry,
+            entry_bar_index=self._current_bar_index(),
+            tight_sl=plan.tight_sl if plan is not None else Decimal(0),
         )
         self._pending_entry_stop = None
+        self._pending_entry_plan = None
 
     def _manage_open_position(self, bar: Bar) -> None:
         state = self._position_state.get(self._instrument)
@@ -1029,11 +1287,13 @@ class ElephantEdgeStrategy(Strategy):
         if one_r <= 0:
             return
         if self._stop_breached(bar, state):
+            self._record_exit_scene(bar, state, "ee.stop", stopped_out=True)
             self._exit_position("ee.stop")
             return
         if state.bars_since_entry >= int(self.max_stagnant_bars):
             excursion = abs(bar.close - state.entry)
             if excursion < Decimal("0.5") * one_r:
+                self._record_exit_scene(bar, state, "ee.scratch", stopped_out=False)
                 self._exit_position("ee.scratch")
                 return
         if not state.partial_done and self._hit_r1(bar, state):
@@ -1044,11 +1304,43 @@ class ElephantEdgeStrategy(Strategy):
             state.partial_done = True
             self._move_stop(state, state.entry, "breakeven")
         if state.partial_done and self._hit_r2(bar, state):
+            self._record_exit_scene(bar, state, "ee.target_r2", stopped_out=False)
             self._exit_position("ee.target_r2")
             return
         self._trail(bar, state, one_r, atr)
-        if self._ist_time(bar) >= self._square_off_time():
+        should_square_off = (
+            self._explicit_square_off
+            or SessionClock.is_intraday_square_off_enabled(self._horizon_enum)
+        )
+        if should_square_off and self._ist_time(bar) >= self._square_off_time():
+            self._record_exit_scene(bar, state, "ee.squareoff", stopped_out=False)
             self._exit_position("ee.squareoff")
+
+    def _record_exit_scene(
+        self, bar: Bar, state: _PositionState, tag: str, *, stopped_out: bool
+    ) -> None:
+        bar_idx = self._current_bar_index()
+        one_r = abs(state.entry - state.initial_sl)
+        if one_r > 0:
+            diff = (
+                bar.close - state.entry if state.side is OrderSide.BUY else state.entry - bar.close
+            )
+            realized_r = diff / one_r
+        else:
+            realized_r = Decimal(0)
+        marker_side = MarkerSide.SELL if state.side is OrderSide.BUY else MarkerSide.BUY
+        marker_kind = MarkerKind.STOP_LINE if stopped_out else MarkerKind.TARGET_HIT
+        self.scene_emitter.add_signal(bar.close, bar_idx, marker_side, marker_kind)
+        self.scene_emitter.add_connector(
+            from_index=state.entry_bar_index,
+            from_price=state.entry,
+            to_index=max(state.entry_bar_index, bar_idx),
+            to_price=bar.close,
+            side=MarkerSide.BUY if state.side is OrderSide.BUY else MarkerSide.SELL,
+            realized_r=realized_r,
+            stopped_out=stopped_out,
+            label=tag,
+        )
 
     @staticmethod
     def _stop_breached(bar: Bar, state: _PositionState) -> bool:
@@ -1094,9 +1386,13 @@ class ElephantEdgeStrategy(Strategy):
         return max(bar.high for bar in window)
 
     def _move_stop(self, state: _PositionState, new_sl: Decimal, reason: str) -> None:
-        del reason
         if new_sl == state.sl:
             return
+        bar_idx = self._current_bar_index()
+        stop_kind = StopKind.BREAKEVEN if reason == "breakeven" else StopKind.TRAILING
+        self.scene_emitter.add_stop(
+            new_sl, x0=bar_idx, x1=bar_idx, kind=stop_kind, previous=state.sl
+        )
         self.on_stop_update(
             StopUpdate(
                 instrument=self._instrument,

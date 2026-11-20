@@ -1,0 +1,14 @@
+name = "elephant_edge_v3"
+symbol = "NSE:NIFTY50-INDEX"
+exchange = "NSE"
+
+[params]
+horizon_mode = "intraday"
+entry_trigger_mode = "all"
+sl_mode = "outer_atr_buffer"
+sl_buffer_atr = "0.25"
+hedge_mode = "auto"
+asset_class = "index"
+min_level_score = 0
+capital = 1000000
+lot_size = 1

@@ -1,0 +1,71 @@
+# Generalized multi-horizon Elephant Edge v3 (EE+ Outer-Buffer) signal step,
+# runnable via catalog_steps/signal/elephant_edge_v3 (strategy.py + config.toml).
+schema = 1
+id = "signal.elephant_edge_v3"
+kind = "signal"
+title = "Elephant Edge v3 (EE+ Outer-Buffer)"
+description = "Generalized multi-horizon level-fusion & outer-buffer SL strategy with 6-layer OverlayScene emission and F&O/MCX hedge synthesis."
+tags = ["elephant_edge", "signal", "outer_buffer", "ee_v3", "hedged"]
+version = "3.0.0"
+strategy_api_version = "1.0.0"
+
+[params.horizon_mode]
+type = "enum"
+description = "Trading horizon and session boundary preset."
+default = "intraday"
+choices = ["intraday", "weekly_expiry", "monthly_expiry", "commodity_cycle"]
+
+[params.entry_trigger_mode]
+type = "enum"
+description = "Candle trigger confirmation mode."
+default = "all"
+choices = ["all", "rejection_wick", "zone_touch_close"]
+
+[params.sl_mode]
+type = "enum"
+description = "Stop-loss placement policy relative to extracted zone bands."
+default = "outer_atr_buffer"
+choices = ["tight_center", "outer_edge", "outer_atr_buffer", "percentile_shield"]
+
+[params.sl_buffer_atr]
+type = "float"
+description = "ATR buffer multiplier placed beyond the band outer edge."
+default = 0.25
+min = 0.0
+max = 1.0
+step = 0.05
+
+[params.hedge_mode]
+type = "enum"
+description = "Hedge synthesis overlay structure."
+default = "auto"
+choices = [
+  "unhedged",
+  "auto",
+  "bull_call_spread",
+  "bull_put_credit_spread",
+  "bear_put_spread",
+  "bear_call_credit_spread",
+  "zone_iron_condor",
+  "protective_collar",
+]
+
+[params.min_level_score]
+type = "int"
+description = "Minimum 0..4 confluence score required for tradeable levels."
+default = 0
+min = 0
+max = 4
+step = 1
+
+[requires]
+
+[consumes]
+shape = "universe"
+columns = ["symbol"]
+
+[emits]
+shape = "orders"
+adds = []
+report = []
+reportable = []

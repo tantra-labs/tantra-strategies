@@ -1,5 +1,5 @@
 """Ported StockSharp strategy families (Quoting, Arbitrage, Market Making,
-Mean Reversion, Turtle, Risk Parity) and execution slicers."""
+Mean Reversion, Turtle, Risk Parity), execution slicers, and flagship EE+/ORB-15."""
 
 from tantra_strategies.strategies.alpha30 import Alpha30Factor
 from tantra_strategies.strategies.arbitrage import CashFuturesArbitrage
@@ -10,6 +10,7 @@ from tantra_strategies.strategies.execution import TWAPSlicer, VWAPSlicer
 from tantra_strategies.strategies.market_making import MarketMakingStrategy
 from tantra_strategies.strategies.mean_reversion import BollingerMeanReversion
 from tantra_strategies.strategies.options import CoveredCallWriter
+from tantra_strategies.strategies.orb15 import Orb15Strategy
 from tantra_strategies.strategies.quoting import QuotingStrategy
 from tantra_strategies.strategies.risk_parity import RiskParity
 from tantra_strategies.strategies.sizing import FixedFractional
@@ -25,6 +26,7 @@ __all__ = [
     "EqualWeight",
     "FixedFractional",
     "MarketMakingStrategy",
+    "Orb15Strategy",
     "QuotingStrategy",
     "RiskParity",
     "TWAPSlicer",

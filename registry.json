@@ -7,6 +7,11 @@
       "path": "catalog_steps/signal/alpha30_factor"
     },
     {
+      "name": "elephant_edge_v3",
+      "category": "signal",
+      "path": "catalog_steps/signal/elephant_edge_v3"
+    },
+    {
       "name": "equal_weight",
       "category": "portfolio",
       "path": "catalog_steps/portfolio/equal_weight"
