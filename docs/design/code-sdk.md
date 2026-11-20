@@ -213,8 +213,8 @@ parity seam, gap 0002).
 
 | Member | Semantics |
 |--------|-----------|
-| `feed(bar)` | Records the latest bar per instrument and re-evaluates resting limit orders at its close. |
-| `feed_tick(tick)` | Records the latest tick price per instrument and re-evaluates resting limit orders at its price. |
+| `feed(bar)` | Records the latest bar per instrument and re-evaluates that instrument's resting orders: plain limits at the close; `STOP_MARKET` and OCO-group (`Strategy.bracket`) legs intrabar against the bar range (gap-through fills at the open, stop wins ties, filled group cancels its siblings). |
+| `feed_tick(tick)` | Records the latest tick price and re-evaluates that instrument's resting orders at the tick price. |
 | `current_price(instrument)` | Latest fed price (bar close or tick last price); `KeyError` if nothing fed for that instrument. |
 | `position(instrument)` | Net signed position (0 default). |
 | `submit(request)` | Market orders fill immediately at the current price. Limit orders fill at `limit_price` when already crossed (BUY `price <= limit`, SELL `price >= limit`), else rest and are re-checked on every subsequent bar/tick. Order ids `SIM-00001`… |

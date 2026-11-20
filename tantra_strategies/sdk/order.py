@@ -45,8 +45,16 @@ class OrderRequest:
     order_type: OrderType = OrderType.MARKET
     limit_price: Decimal | None = None
     tag: str | None = None
+    stop_price: Decimal | None = None
+    oco_group: str | None = None
 
     def __post_init__(self) -> None:
+        if self.stop_price is not None and not isinstance(self.stop_price, Decimal):
+            object.__setattr__(self, "stop_price", Decimal(str(self.stop_price)))
+        if self.order_type in (OrderType.STOP_MARKET, OrderType.STOP_LIMIT) and (
+            self.stop_price is None
+        ):
+            raise ValueError("stop orders require stop_price")
         object.__setattr__(
             self,
             "quantity",

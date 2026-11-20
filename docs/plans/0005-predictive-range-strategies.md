@@ -42,8 +42,9 @@ parameters; MFI "squat" filter not implemented).
 `PrTrendPullbackStrategy` and `PrVidyaBreakoutStrategy` are ordinary SDK `Strategy` subclasses consuming
 library entries by id; they trade only via `Strategy` and `RiskEngine`. Recipe entries in the registry
 (`pr-trend-pullback`, `pr-vidya-breakout`) point to them and are not computable.
-Known limitation: stop/target hits exit with a market order at the bar close, not at the stop/target price
-(gap 0008).
+Exits are an OCO bracket (`Strategy.bracket`: STOP_MARKET stop + LIMIT target) that `SimulatedContext`
+fills intrabar at the level (gap-through bars fill at the open; the stop wins when both legs trigger on one
+bar). Gap 0008 (bar-close exits) is closed.
 
 ## 5. Signal study
 
@@ -78,7 +79,6 @@ source, MCP) and `tests/strategies/test_predictive_ranges.py`. Gates: `ruff chec
 
 ## 9. Known limitations and next steps
 
-- Recipe exits fill at bar close: [gap 0008](../gaps/0008-recipe-exits-at-bar-close.md).
 - Bars come from CSV only; lakehouse v3 source is `tantra-data` gap 0026 (cited in `bar_source.py`).
 - Wiring (not done): runtime `docs/plans/0010` (MCP supervisor + `/api/v2` proxy), agent
   `docs/plans/0017` (copilot access), ui-web `docs/plans/0017` (Indicator Lab tab).

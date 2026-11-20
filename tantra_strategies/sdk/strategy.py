@@ -116,6 +116,52 @@ class Strategy:
             )
         )
 
+    def bracket(
+        self,
+        instrument: str,
+        *,
+        position_side: OrderSide,
+        quantity: Decimal | int | str,
+        stop: Decimal,
+        target: Decimal,
+        group: str | None = None,
+    ) -> tuple[OrderEvent, OrderEvent]:
+        """Place OCO exit legs for an open position; returns ``(stop_event, target_event)``.
+
+        Legs are on the side opposite ``position_side``: a ``STOP_MARKET`` at
+        ``stop`` (tag ``bracket.stop``) and a ``LIMIT`` at ``target`` (tag
+        ``bracket.target``) sharing one ``oco_group``. ``SimulatedContext``
+        enforces the OCO natively and fills intrabar; live OCO enforcement is
+        delegated to the ``ExecutionGateway`` (runtime synthetic-OCO).
+        """
+        self._bracket_count = getattr(self, "_bracket_count", 0) + 1
+        oco = group if group is not None else f"bracket-{self._bracket_count}"
+        exit_side = OrderSide.SELL if position_side is OrderSide.BUY else OrderSide.BUY
+        qty = self._qty(quantity)
+        stop_event = self.submit(
+            OrderRequest(
+                instrument=instrument,
+                side=exit_side,
+                quantity=qty,
+                order_type=OrderType.STOP_MARKET,
+                stop_price=stop,
+                tag="bracket.stop",
+                oco_group=oco,
+            )
+        )
+        target_event = self.submit(
+            OrderRequest(
+                instrument=instrument,
+                side=exit_side,
+                quantity=qty,
+                order_type=OrderType.LIMIT,
+                limit_price=target,
+                tag="bracket.target",
+                oco_group=oco,
+            )
+        )
+        return stop_event, target_event
+
     def submit(self, request: OrderRequest) -> OrderEvent:
         context = self._require_context()
         event = context.submit(request)

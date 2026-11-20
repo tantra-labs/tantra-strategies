@@ -155,3 +155,53 @@ def test_real_indicators_smoke() -> None:
         PrVidyaBreakoutStrategy(length=3, factor=D(1), vidya_atr_length=3),
     ):
         run(s, bars)
+
+
+def obar(i: int, o: str, high: str, low: str, close: str) -> Bar:
+    return Bar(INST, T0 + timedelta(days=i), D(o), D(high), D(low), D(close), 100, "1d")
+
+
+def exit_fill(ctx: SimulatedContext) -> D:
+    """Price of the last COMPLETE event (the bracket exit)."""
+    complete = [e for e in ctx.events if e.status.value == "complete"]
+    assert len(complete) == 2  # entry + exit
+    assert complete[-1].price is not None
+    return complete[-1].price
+
+
+PULL = [bar(0, 95, 91, 94), bar(1, 96, 92, 95)]  # entry at 95, stop 80, target 110
+
+
+def test_pullback_target_fills_at_level_not_close() -> None:
+    ctx = run(Pullback(), [*PULL, obar(2, "105", "112", "100", "108")])
+    assert ctx.position(INST) == D(0)
+    assert exit_fill(ctx) == D(110)
+
+
+def test_pullback_stop_fills_at_level_and_gap_at_open() -> None:
+    ctx = run(Pullback(), [*PULL, obar(2, "95", "96", "78", "85")])
+    assert exit_fill(ctx) == D(80)
+    ctx = run(Pullback(), [*PULL, obar(2, "70", "72", "68", "71")])
+    assert exit_fill(ctx) == D(70)
+
+
+def test_pullback_stop_wins_when_both_hit() -> None:
+    ctx = run(Pullback(), [*PULL, obar(2, "100", "111", "79", "100")])
+    assert exit_fill(ctx) == D(80)
+
+
+def test_pullback_short_target_fills_at_level() -> None:
+    bars = [bar(0, 109, 104, 106), bar(1, 108, 104, 105), obar(2, "100", "101", "89", "92")]
+    ctx = run(Pullback(regime=-1, short=True), bars)
+    assert ctx.position(INST) == D(0)
+    assert exit_fill(ctx) == D(90)
+
+
+def test_breakout_exits_fill_at_levels() -> None:
+    entry = bar(0, 101, 99, 100)
+    ctx = run(Breakout(), [entry, bar(1, 106, 99, 105), obar(2, "101", "108", "100", "105")])
+    assert exit_fill(ctx) == D("107.5")
+    ctx = run(Breakout(), [entry, obar(1, "100", "102", "94", "96")])
+    assert exit_fill(ctx) == D(95)
+    ctx = run(Breakout(trend=-1, delta="-40"), [entry, obar(1, "100", "106", "99", "103")])
+    assert exit_fill(ctx) == D(105)

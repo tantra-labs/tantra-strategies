@@ -2,8 +2,9 @@
 recipe.pr-vidya-breakout).
 
 Non-commercial research; ideas from LuxAlgo/Skyrexio/BigBeluga, clean-room.
-Stops/targets are evaluated on each bar's range (stop first when both are hit);
-orders are market orders via ``buy``/``sell``. One position at a time.
+Entries are market orders; the stop/target are resting OCO bracket orders
+(``Strategy.bracket``) filled intrabar at their level (gap-through at the open;
+the stop wins when both are hit on one bar). One position at a time.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from tantra_library.detectors import (
 from tantra_library.indicators import ATR
 from tantra_library.primitives import SwingPivot
 from tantra_strategies.sdk import Bar, Parameter, Strategy
+from tantra_strategies.sdk.order import OrderEvent, OrderSide, OrderStatus
 
 _ZERO = Decimal(0)
 
@@ -52,36 +54,47 @@ class _BracketStrategy(Strategy):
     allow_short = Parameter(default=True)
 
     _trade: _Trade | None = None
+    _leg_ids: frozenset[str] = frozenset()
+    _exited: bool = False
 
     def _reset_trade(self) -> None:
         self._trade = None
+        self._leg_ids = frozenset()
+        self._exited = False
 
     def _enter(self, bar: Bar, side: int, stop: Decimal, target: Decimal) -> None:
+        """Market entry, then resting OCO stop/target legs filled intrabar."""
         quantity = _dec(self.qty)
         if side > 0:
             self.buy(bar.instrument, quantity)
+            position_side = OrderSide.BUY
         else:
             self.sell(bar.instrument, quantity)
+            position_side = OrderSide.SELL
         self._trade = _Trade(side, stop, target)
+        stop_event, target_event = self.bracket(
+            bar.instrument,
+            position_side=position_side,
+            quantity=quantity,
+            stop=stop,
+            target=target,
+        )
+        self._leg_ids = frozenset({stop_event.order_id, target_event.order_id})
+        if OrderStatus.COMPLETE in (stop_event.status, target_event.status):
+            self._exited = False
+            self._trade = None
+            self._leg_ids = frozenset()
 
-    def _manage_exit(self, bar: Bar) -> bool:
-        """Close the open trade if stop or target was reached on this bar."""
-        trade = self._trade
-        if trade is None:
-            return False
-        if trade.side > 0:
-            hit = bar.low <= trade.stop or bar.high >= trade.target
-        else:
-            hit = bar.high >= trade.stop or bar.low <= trade.target
-        if not hit:
-            return False
-        held = self.position(bar.instrument)
-        if held > 0:
-            self.sell(bar.instrument, held)
-        elif held < 0:
-            self.buy(bar.instrument, -held)
-        self._trade = None
-        return True
+    def on_order_event(self, event: OrderEvent) -> None:
+        if event.status is OrderStatus.COMPLETE and event.order_id in self._leg_ids:
+            self._trade = None
+            self._leg_ids = frozenset()
+            self._exited = True
+
+    def _manage_exit(self, _bar: Bar) -> bool:
+        """True if a bracket leg filled intrabar since the previous bar (consumes the flag)."""
+        exited, self._exited = self._exited, False
+        return exited
 
 
 class PrTrendPullbackStrategy(_BracketStrategy):

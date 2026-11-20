@@ -15,12 +15,13 @@ the remaining future work is enumerated below.
 
 | # | Title | Plan |
 |---|-------|------|
-| [0008](0008-recipe-exits-at-bar-close.md) | Predictive Range recipe strategies exit stop/target hits at bar close, not at the stop/target price | root plan 0016 |
+| _None_ | | |
 
 ## Closed Gaps
 
 | # | Title | Closed In |
 |---|-------|-----------|
+| 0008 | Predictive Range recipe exits filled at bar close — SDK STOP_MARKET + OCO `Strategy.bracket`, `SimulatedContext` intrabar stop/target fills (gap-through at open, stop wins ties) | 2026-11-20 |
 | 0007 | `signal.alpha30_factor` step manifest is declarative-only (validated, not runnable) — runnable catalog strategies `equal_weight` + `alpha30_factor` (SDK `Strategy` subclasses + harness-loader `strategy.py`/`config.toml`/`step.toml` in the loader layout, registered in `registry.json`); un-skips tantra-examples `test_07_alpha30_backtest.py` (T17.6) | 2026-11-17 |
 | 0001 | `Strategy.on_tick` declared but never dispatched — `Tick` model + `Strategy.run_ticks` / `SimulatedContext.run_ticks` / `LiveContext.run_ticks` dispatch (T8.1) | 2026-11-14 |
 | 0002 | No live/feed-backed `StrategyContext` in-repo (only `SimulatedContext`) — `LiveContext` + `MarketDataFeed`/`ExecutionGateway` seams in `sdk/live.py`, sim/live parity tests (T8.2) | 2026-11-14 |
