@@ -60,9 +60,11 @@ class Registry:
         tokens = query.lower().split()
         if not tokens:
             return pool[:limit]
-        scored: list[tuple[int, str, Entry]] = []
+        scored: list[tuple[int, int, str, Entry]] = []
         for e in pool:
             id_l = e.id.lower()
+            # "ind.vidya" -> "vidya": an exact name match outranks ids that merely contain it.
+            name_l = id_l.split(".", 1)[-1]
             title_l = " ".join((e.title, *e.aliases)).lower()
             text_l = f"{e.summary} {e.body_md}".lower()
             score = sum(
@@ -70,9 +72,12 @@ class Registry:
                 for t in tokens
             )
             if score > 0:
-                scored.append((-score, e.id, e))
-        scored.sort(key=lambda s: (s[0], s[1]))
-        return [e for _, _, e in scored[:limit]]
+                if "-".join(tokens) == name_l:
+                    score += 5
+                scored.append((-score, len(e.id), e.id, e))
+        # Ties: shorter (more basic) ids first, then alphabetical.
+        scored.sort(key=lambda s: (s[0], s[1], s[2]))
+        return [e for *_, e in scored[:limit]]
 
     def validate(self) -> None:
         for e in self._entries.values():

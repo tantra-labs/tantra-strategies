@@ -105,3 +105,11 @@ def test_predictive_ranges_matches_direct() -> None:
     rows = [direct.update(b) for b in bars]
     for name in ("r2", "r1", "center", "s1", "s2", "center_step"):
         assert frame.columns[name] == [getattr(r, name) for r in rows]
+
+
+def test_search_exact_name_ranks_basic_entry_first() -> None:
+    from tantra_library import default_registry
+
+    ids = [e.id for e in default_registry().search("vidya")]
+    assert ids[0] == "ind.vidya"
+    assert default_registry().search("predictive ranges")[0].id == "ind.predictive-ranges"
