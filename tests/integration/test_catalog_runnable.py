@@ -192,3 +192,35 @@ def test_elephant_edge_v3_submits_intents_and_emits_scene_via_wheel_ledger() -> 
     assert scene.stops
     assert scene.hints
     assert scene.hedges
+
+
+def _validate_chain_module():
+    spec = importlib.util.spec_from_file_location(
+        "_validate_chain_dec", ROOT / "tools" / "validate_chain.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_elephant_edge_v3_sl_buffer_is_a_strict_decimal_param() -> None:
+    vc = _validate_chain_module()
+    directory = ROOT / _registry()["elephant_edge_v3"]["path"]
+    manifest = tomllib.loads((directory / "step.toml").read_text(encoding="utf-8"))
+    spec = manifest["params"]["sl_buffer_atr"]
+    assert spec["type"] == "decimal"
+    assert vc.schema_errors(manifest) == []
+    assert vc._check_param_value("s", "sl_buffer_atr", "0.5", spec) == []
+    assert vc._check_param_value("s", "sl_buffer_atr", 1, spec) == []
+
+
+def test_decimal_param_rejects_float_and_out_of_range() -> None:
+    vc = _validate_chain_module()
+    spec = {"type": "decimal", "min": "0", "max": "1", "default": "0.25"}
+    assert vc._check_param_value("s", "p", 0.5, spec)  # float rejected
+    assert vc._check_param_value("s", "p", "nan", spec)  # non-finite rejected
+    assert any("above max" in e for e in vc._check_param_value("s", "p", "1.5", spec))
+    assert any("below min" in e for e in vc._check_param_value("s", "p", "-0.1", spec))
+    bad = {"id": "signal.x", "kind": "signal", "params": {"p": {**spec, "min": 0.1}}}
+    assert any("min must be a decimal" in e for e in vc.schema_errors(bad))

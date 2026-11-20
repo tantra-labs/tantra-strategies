@@ -20,10 +20,14 @@ from tantra_library.detectors import (
 from tantra_library.indicators import (
     ATR,
     CMO,
+    EMA,
+    RSI,
     VIDYA,
     Alligator,
     ATRBands,
     AwesomeOscillator,
+    BandsValue,
+    BollingerBands,
     VolumeDeltaPct,
 )
 from tantra_library.model import (
@@ -49,6 +53,7 @@ from tantra_library.primitives import (
     SwingPivot,
     TrueRange,
     UpDownVolume,
+    source_value,
 )
 from tantra_library.registry import Registry
 
@@ -348,6 +353,20 @@ def _prims() -> list[Entry]:
     ]
 
 
+def _bollinger(p: P) -> StreamingComputation:
+    src = _s(p, "source")
+    return ad.StreamAdapter(
+        BollingerBands(_i(p, "period"), _d(p, "deviations")),
+        lambda o, bar: _bands(o.update(source_value(bar, src))),
+    )
+
+
+def _bands(v: BandsValue | None) -> dict[str, Decimal | None]:
+    if v is None:
+        return {"upper": None, "middle": None, "lower": None}
+    return {"upper": v.upper, "middle": v.middle, "lower": v.lower}
+
+
 def _indicators() -> list[Entry]:
     K = EntryKind.INDICATOR
 
@@ -413,6 +432,47 @@ def _indicators() -> list[Entry]:
             ("concept.atr", "concept.volatility-range"),
             ("ind.atr",),
             ("ind.predictive-ranges",),
+            family="family.volatility",
+        ),
+        e(
+            "ind.ema",
+            "Exponential Moving Average",
+            "Exponentially weighted average seeded with the first value.",
+            (_int("period", 20, "EMA length"), _src()),
+            _outs(("ema", _PRICE, "EMA")),
+            lambda p: ad.from_source(EMA(_i(p, "period")), "ema", _s(p, "source")),
+            ("concept.adaptive-ma",),
+            aliases=("EMA",),
+            family="family.trend",
+        ),
+        e(
+            "ind.rsi",
+            "Relative Strength Index",
+            "Wilder RSI scaled to 0-100.",
+            (_int("period", 14, "RSI length"), _src()),
+            _outs(("rsi", OutputUnit.PERCENT, "RSI")),
+            lambda p: ad.from_source(RSI(_i(p, "period")), "rsi", _s(p, "source")),
+            ("concept.momentum-oscillator",),
+            aliases=("RSI",),
+            family="family.momentum",
+        ),
+        e(
+            "ind.bollinger-bands",
+            "Bollinger Bands",
+            "SMA +/- standard-deviation bands.",
+            (
+                _int("period", 20, "window length"),
+                _dec("deviations", "2", "standard-deviation multiplier"),
+                _src(),
+            ),
+            _outs(
+                ("upper", _PRICE, "upper band"),
+                ("middle", _PRICE, "middle"),
+                ("lower", _PRICE, "lower band"),
+            ),
+            _bollinger,
+            ("concept.volatility-range",),
+            aliases=("BBANDS", "Bollinger"),
             family="family.volatility",
         ),
         e(

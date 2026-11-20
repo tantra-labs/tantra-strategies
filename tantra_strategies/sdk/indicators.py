@@ -1,16 +1,21 @@
 """Streaming technical indicators with exact ``Decimal`` arithmetic.
 
 Indicators are fed one value (or one ``Bar`` for range-based indicators) at a
-time, exactly as a live or backtest event loop delivers data. Every calculation
-stays in ``Decimal`` (``Decimal.sqrt`` is used for standard deviation).
+time, exactly as a live or backtest event loop delivers data. These are thin
+stateful wrappers over the Decimal kernel in ``tantra_library``; the library
+modules are imported lazily inside constructors to avoid an import cycle
+(``tantra_library.primitives`` imports ``tantra_strategies.sdk.bar``).
 """
 
 from __future__ import annotations
 
-from collections import deque
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from tantra_strategies.sdk.bar import Bar
+
+if TYPE_CHECKING:
+    from tantra_library.indicators import BandsValue
 
 
 class Indicator:
@@ -35,29 +40,37 @@ class SMA(Indicator):
 
     def __init__(self, period: int) -> None:
         super().__init__(period)
-        self._history: list[Decimal] = []
+        from tantra_library.primitives import SMA as _SMA
+
+        self._inner = _SMA(period)
+        self._seen = 0
+        self._warmup: list[Decimal] = []
+        self._current: Decimal | None = None
+        self._previous: Decimal | None = None
 
     def update(self, value: Decimal) -> None:
-        self._history.append(value)
+        self._seen += 1
+        if self._seen <= self.period:
+            self._warmup.append(value)
+        self._previous = self._current
+        self._current = self._inner.update(value)
 
     @property
     def ready(self) -> bool:
-        return len(self._history) >= self.period
+        return self._seen >= self.period
 
     @property
     def value(self) -> Decimal:
-        return self._mean(self._history[-self.period :])
+        if self._current is not None:
+            return self._current
+        return sum(self._warmup, Decimal(0)) / Decimal(len(self._warmup))
 
     @property
     def previous_value(self) -> Decimal | None:
         """SMA over the window one step ago (used for cross detection)."""
-        if len(self._history) < self.period + 1:
+        if self._seen < self.period + 1:
             return None
-        return self._mean(self._history[-self.period - 1 : -1])
-
-    @staticmethod
-    def _mean(values: list[Decimal]) -> Decimal:
-        return sum(values, Decimal(0)) / Decimal(len(values))
+        return self._previous
 
 
 class EMA(Indicator):
@@ -65,25 +78,23 @@ class EMA(Indicator):
 
     def __init__(self, period: int) -> None:
         super().__init__(period)
-        self._multiplier = Decimal(2) / Decimal(period + 1)
-        self._ema: Decimal | None = None
+        from tantra_library.indicators import EMA as _EMA
+
+        self._inner = _EMA(period)
 
     def update(self, value: Decimal) -> None:
-        previous = self._ema
-        if previous is None:
-            self._ema = value
-        else:
-            self._ema = value * self._multiplier + previous * (Decimal(1) - self._multiplier)
+        self._inner.update(value)
 
     @property
     def ready(self) -> bool:
-        return self._ema is not None
+        return self._inner.value is not None
 
     @property
     def value(self) -> Decimal:
-        if self._ema is None:
+        v = self._inner.value
+        if v is None:
             raise ValueError("EMA is not ready")
-        return self._ema
+        return v
 
 
 class RSI(Indicator):
@@ -91,45 +102,23 @@ class RSI(Indicator):
 
     def __init__(self, period: int = 14) -> None:
         super().__init__(period)
-        self._gains: list[Decimal] = []
-        self._losses: list[Decimal] = []
-        self._avg_gain: Decimal | None = None
-        self._avg_loss: Decimal | None = None
-        self._previous: Decimal | None = None
+        from tantra_library.indicators import RSI as _RSI
+
+        self._inner = _RSI(period)
 
     def update(self, value: Decimal) -> None:
-        previous = self._previous
-        if previous is not None:
-            change = value - previous
-            gain = max(change, Decimal(0))
-            loss = max(-change, Decimal(0))
-            self._gains.append(gain)
-            self._losses.append(loss)
-            avg_gain = self._avg_gain
-            avg_loss = self._avg_loss
-            if avg_gain is None and len(self._gains) >= self.period:
-                window = self._gains[-self.period :]
-                self._avg_gain = sum(window, Decimal(0)) / Decimal(self.period)
-                self._avg_loss = sum(self._losses[-self.period :], Decimal(0)) / Decimal(
-                    self.period
-                )
-            elif avg_gain is not None and avg_loss is not None:
-                self._avg_gain = (avg_gain * Decimal(self.period - 1) + gain) / Decimal(self.period)
-                self._avg_loss = (avg_loss * Decimal(self.period - 1) + loss) / Decimal(self.period)
-        self._previous = value
+        self._inner.update(value)
 
     @property
     def ready(self) -> bool:
-        return self._avg_gain is not None
+        return self._inner.value is not None
 
     @property
     def value(self) -> Decimal:
-        if self._avg_gain is None or self._avg_loss is None:
+        v = self._inner.value
+        if v is None:
             raise ValueError("RSI is not ready")
-        if self._avg_loss == 0:
-            return Decimal(100)
-        relative_strength = self._avg_gain / self._avg_loss
-        return Decimal(100) - Decimal(100) / (Decimal(1) + relative_strength)
+        return v
 
 
 class ATR(Indicator):
@@ -137,35 +126,23 @@ class ATR(Indicator):
 
     def __init__(self, period: int = 14) -> None:
         super().__init__(period)
-        self._true_ranges: list[Decimal] = []
-        self._previous_close: Decimal | None = None
-        self._atr: Decimal | None = None
+        from tantra_library.indicators import ATR as _ATR
+
+        self._inner = _ATR(period)
 
     def update(self, bar: Bar) -> None:
-        true_range = bar.high - bar.low
-        if self._previous_close is not None:
-            true_range = max(
-                true_range,
-                abs(bar.high - self._previous_close),
-                abs(bar.low - self._previous_close),
-            )
-        self._true_ranges.append(true_range)
-        self._previous_close = bar.close
-        if self._atr is None and len(self._true_ranges) >= self.period:
-            window = self._true_ranges[-self.period :]
-            self._atr = sum(window, Decimal(0)) / Decimal(self.period)
-        elif self._atr is not None:
-            self._atr = (self._atr * Decimal(self.period - 1) + true_range) / Decimal(self.period)
+        self._inner.update(bar)
 
     @property
     def ready(self) -> bool:
-        return self._atr is not None
+        return self._inner.value is not None
 
     @property
     def value(self) -> Decimal:
-        if self._atr is None:
+        v = self._inner.value
+        if v is None:
             raise ValueError("ATR is not ready")
-        return self._atr
+        return v
 
 
 class BollingerBands:
@@ -174,37 +151,53 @@ class BollingerBands:
     def __init__(self, period: int = 20, deviations: Decimal | int = 2) -> None:
         if period <= 0:
             raise ValueError("period must be positive")
+        from tantra_library.indicators import BollingerBands as _BB
+
         self.period = period
         self.deviations = (
             deviations if isinstance(deviations, Decimal) else Decimal(str(deviations))
         )
-        self._history: deque[Decimal] = deque(maxlen=period)
+        if not self.deviations.is_finite() or self.deviations < 0:
+            raise ValueError("deviations must be a finite, non-negative Decimal")
+        self._inner = _BB(period, self.deviations)
+        self._partial: list[Decimal] = []
 
     def update(self, value: Decimal) -> None:
-        self._history.append(value)
+        if len(self._partial) < self.period:
+            self._partial.append(value)
+        self._inner.update(value)
 
     @property
     def ready(self) -> bool:
-        return len(self._history) == self.period
+        return self._inner.value is not None
+
+    def _bands(self) -> BandsValue:
+        v = self._inner.value
+        if v is not None:
+            return v
+        if not self._partial:
+            raise ValueError("BollingerBands has no values")
+        # Not yet full: bands over the values seen so far (legacy behaviour).
+        from tantra_library.indicators import BollingerBands as _BB
+
+        partial = _BB(len(self._partial), self.deviations)
+        out = None
+        for x in self._partial:
+            out = partial.update(x)
+        assert out is not None
+        return out
 
     @property
     def middle(self) -> Decimal:
-        window = list(self._history)
-        return sum(window, Decimal(0)) / Decimal(len(window))
+        return self._bands().middle
 
     @property
     def upper(self) -> Decimal:
-        return self.middle + self.deviations * self._stddev()
+        return self._bands().upper
 
     @property
     def lower(self) -> Decimal:
-        return self.middle - self.deviations * self._stddev()
-
-    def _stddev(self) -> Decimal:
-        window = list(self._history)
-        mean = sum(window, Decimal(0)) / Decimal(len(window))
-        variance = sum((value - mean) ** 2 for value in window) / Decimal(len(window))
-        return variance.sqrt()
+        return self._bands().lower
 
 
 def crosses_above(fast: Indicator, slow: Indicator) -> bool:

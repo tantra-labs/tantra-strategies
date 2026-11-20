@@ -27,6 +27,7 @@ weights -> orders``; ``consumes.shape`` may be a list of accepted shapes.
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 __all__ = ["schema_errors", "validate_chain"]
@@ -98,8 +99,16 @@ def schema_errors(manifest: dict[str, Any]) -> list[str]:
                 errors.append(f"param {name!r} requires a 'default'")
             if spec.get("type") == "enum" and not spec.get("choices"):
                 errors.append(f"param {name!r} of type 'enum' requires 'choices'")
+            is_decimal = spec.get("type") == "decimal"
+            if is_decimal and "default" in spec and _as_decimal(spec["default"]) is None:
+                errors.append(f"param {name!r} default must be a decimal string or int")
             for bound in ("min", "max", "step"):
-                if bound in spec and not isinstance(spec[bound], (int, float)):
+                if bound not in spec:
+                    continue
+                if is_decimal:
+                    if _as_decimal(spec[bound]) is None:
+                        errors.append(f"param {name!r} {bound} must be a decimal string or int")
+                elif not isinstance(spec[bound], (int, float)):
                     errors.append(f"param {name!r} {bound} must be a number")
 
     for label in ("consumes", "emits"):
@@ -177,7 +186,15 @@ def _check_param_value(sid: str, name: str, value: object, spec: dict[str, Any])
     if not _type_ok(ptype, value):
         errors.append(f"{sid} {name}: expected {ptype}, got {type(value).__name__}")
         return errors
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if ptype == "decimal":
+        dec = _as_decimal(value)
+        low = _as_decimal(spec.get("min")) if "min" in spec else None
+        high = _as_decimal(spec.get("max")) if "max" in spec else None
+        if dec is not None and low is not None and dec < low:
+            errors.append(f"{sid} {name}: {value} below min")
+        if dec is not None and high is not None and dec > high:
+            errors.append(f"{sid} {name}: {value} above max")
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
         minimum = spec.get("min")
         if isinstance(minimum, (int, float)) and value < minimum:
             errors.append(f"{sid} {name}: {value} below min")
@@ -193,7 +210,20 @@ def _check_param_value(sid: str, name: str, value: object, spec: dict[str, Any])
     return errors
 
 
+def _as_decimal(value: object) -> Decimal | None:
+    """Finite ``Decimal`` from a str or int (never float/bool), else ``None``."""
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return None
+    try:
+        dec = Decimal(value)
+    except (InvalidOperation, ValueError):
+        return None
+    return dec if dec.is_finite() else None
+
+
 def _type_ok(ptype: str, value: object) -> bool:
+    if ptype == "decimal":
+        return _as_decimal(value) is not None
     if ptype in ("int", "window"):
         return isinstance(value, int) and not isinstance(value, bool)
     if ptype == "float":

@@ -28,12 +28,12 @@ default = "outer_atr_buffer"
 choices = ["tight_center", "outer_edge", "outer_atr_buffer", "percentile_shield"]
 
 [params.sl_buffer_atr]
-type = "float"
+type = "decimal"
 description = "ATR buffer multiplier placed beyond the band outer edge."
-default = 0.25
-min = 0.0
-max = 1.0
-step = 0.05
+default = "0.25"
+min = "0"
+max = "1"
+step = "0.05"
 
 [params.hedge_mode]
 type = "enum"

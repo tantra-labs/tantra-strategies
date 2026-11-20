@@ -21,6 +21,7 @@ from tantra_strategies.sdk.bar import Bar
 
 _ZERO = Decimal(0)
 _HUNDRED = Decimal(100)
+_ONE = Decimal(1)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +53,113 @@ class ATR:
     def reset(self) -> None:
         self._tr.reset()
         self._rma.reset()
+
+
+class EMA:
+    """Exponential moving average seeded with the first value."""
+
+    def __init__(self, period: int) -> None:
+        _check_period(period)
+        self.period = period
+        self._mult = Decimal(2) / Decimal(period + 1)
+        self._value: Decimal | None = None
+
+    @property
+    def value(self) -> Decimal | None:
+        return self._value
+
+    def update(self, x: Decimal) -> Decimal | None:
+        prev = self._value
+        if prev is None:
+            self._value = x
+        else:
+            self._value = x * self._mult + prev * (_ONE - self._mult)
+        return self._value
+
+    def reset(self) -> None:
+        self._value = None
+
+
+class RSI:
+    """Wilder's Relative Strength Index (SMA-seeded averages, then Wilder smoothing)."""
+
+    def __init__(self, period: int = 14) -> None:
+        _check_period(period)
+        self.period = period
+        self._gains: list[Decimal] = []
+        self._losses: list[Decimal] = []
+        self._avg_gain: Decimal | None = None
+        self._avg_loss: Decimal | None = None
+        self._prev: Decimal | None = None
+
+    @property
+    def value(self) -> Decimal | None:
+        if self._avg_gain is None or self._avg_loss is None:
+            return None
+        if self._avg_loss == 0:
+            return _HUNDRED
+        return _HUNDRED - _HUNDRED / (_ONE + self._avg_gain / self._avg_loss)
+
+    def update(self, x: Decimal) -> Decimal | None:
+        prev = self._prev
+        if prev is not None:
+            change = x - prev
+            gain = max(change, _ZERO)
+            loss = max(-change, _ZERO)
+            n = Decimal(self.period)
+            if self._avg_gain is None:
+                self._gains.append(gain)
+                self._losses.append(loss)
+                if len(self._gains) >= self.period:
+                    self._avg_gain = sum(self._gains[-self.period :], _ZERO) / n
+                    self._avg_loss = sum(self._losses[-self.period :], _ZERO) / n
+                    self._gains.clear()
+                    self._losses.clear()
+            elif self._avg_loss is not None:
+                self._avg_gain = (self._avg_gain * (n - 1) + gain) / n
+                self._avg_loss = (self._avg_loss * (n - 1) + loss) / n
+        self._prev = x
+        return self.value
+
+    def reset(self) -> None:
+        self._gains.clear()
+        self._losses.clear()
+        self._avg_gain = None
+        self._avg_loss = None
+        self._prev = None
+
+
+class BollingerBands:
+    """SMA +/- ``deviations`` population standard deviations."""
+
+    def __init__(self, period: int = 20, deviations: Decimal = Decimal(2)) -> None:
+        _check_period(period)
+        if not isinstance(deviations, Decimal) or not deviations.is_finite() or deviations < 0:
+            raise InvalidParam("deviations must be a non-negative finite Decimal")
+        self.period = period
+        self.deviations = deviations
+        self._buf: deque[Decimal] = deque(maxlen=period)
+        self._value: BandsValue | None = None
+
+    @property
+    def value(self) -> BandsValue | None:
+        return self._value
+
+    def update(self, x: Decimal) -> BandsValue | None:
+        self._buf.append(x)
+        if len(self._buf) < self.period:
+            return None
+        window = list(self._buf)
+        n = Decimal(len(window))
+        mean = sum(window, _ZERO) / n
+        std = (sum(((v - mean) ** 2 for v in window), _ZERO) / n).sqrt()
+        off = self.deviations * std
+        self._value = BandsValue(mean + off, mean, mean - off)
+        return self._value
+
+    def reset(self) -> None:
+        self._buf.clear()
+        self._value = None
 
 
 class ATRBands:
