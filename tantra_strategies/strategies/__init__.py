@@ -11,6 +11,10 @@ from tantra_strategies.strategies.market_making import MarketMakingStrategy
 from tantra_strategies.strategies.mean_reversion import BollingerMeanReversion
 from tantra_strategies.strategies.options import CoveredCallWriter
 from tantra_strategies.strategies.orb15 import Orb15Strategy
+from tantra_strategies.strategies.predictive_ranges import (
+    PrTrendPullbackStrategy,
+    PrVidyaBreakoutStrategy,
+)
 from tantra_strategies.strategies.quoting import QuotingStrategy
 from tantra_strategies.strategies.risk_parity import RiskParity
 from tantra_strategies.strategies.sizing import FixedFractional
@@ -27,6 +31,8 @@ __all__ = [
     "FixedFractional",
     "MarketMakingStrategy",
     "Orb15Strategy",
+    "PrTrendPullbackStrategy",
+    "PrVidyaBreakoutStrategy",
     "QuotingStrategy",
     "RiskParity",
     "TWAPSlicer",

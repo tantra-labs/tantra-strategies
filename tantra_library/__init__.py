@@ -78,6 +78,13 @@ from tantra_library.primitives import (
     typical_price,
 )
 from tantra_library.registry import Registry
+from tantra_library.study import (
+    EventFilter,
+    HorizonStats,
+    StudyEvent,
+    StudyResult,
+    signal_study,
+)
 
 __all__ = [
     "ATR",
@@ -96,9 +103,11 @@ __all__ = [
     "DuplicateEntry",
     "Entry",
     "EntryKind",
+    "EventFilter",
     "Factory",
     "Frame",
     "Highest",
+    "HorizonStats",
     "InputKind",
     "InputQualityError",
     "InvalidParam",
@@ -124,6 +133,8 @@ __all__ = [
     "ReversalBars",
     "ReversalBarsValue",
     "StreamingComputation",
+    "StudyEvent",
+    "StudyResult",
     "SwingPivot",
     "TrendFlipEvent",
     "TrendRegimeEvent",
@@ -142,6 +153,7 @@ __all__ = [
     "build_default_registry",
     "default_registry",
     "median_price",
+    "signal_study",
     "source_value",
     "typical_price",
 ]
