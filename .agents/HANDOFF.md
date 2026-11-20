@@ -1,46 +1,14 @@
 # `tantra-strategies` — Inter-Agent Handoff
 
 ## Latest Batch
-* **Gap 0007 closed (2026-11-17)**: `signal.alpha30_factor` is now runnable, not
-  just declarative. Added:
-  - Runnable SDK strategies `EqualWeight` (`strategies/equal_weight.py`) and
-    `Alpha30Factor` (`strategies/alpha30.py`) with declarative `Parameter`s and
-    exact `Decimal` math, registered in `strategies/__init__.py` and the top-level
-    package.
-  - Manifest `manifests/strategies/equal_weight.toml` (family `portfolio`). Legacy `catalog/` (11 manifests) was migrated into `manifests/strategies/` on 2026-11-20 and removed (`tools/validate_catalog.py` retired; use `tools/validate_manifests.py`).
-  - Harness-loader layout (what `tantra-examples` `load_named` resolves): wheel
-    `strategy.py` + `config.toml` + `step.toml` in
-    `catalog_steps/portfolio/equal_weight/` and
-    `catalog_steps/signal/alpha30_factor/`, both registered in `registry.json`.
-  - Tests: `tests/strategies/test_equal_weight.py`, `test_alpha30.py`,
-    `tests/integration/test_catalog_runnable.py` (+ `basket_bars` helper in
-    `tests/conftest.py`). Suite 218 -> 245 green.
-  - Un-skips tantra-examples `test_07_alpha30_backtest.py` (6 skipped -> 6
-    passed; the un-skip surfaced two examples-side money bugs — `capital_minor`
-    major/minor units in `examples/universes/07_alpha30_backtest.py` and the
-    `fees_minor` paisa-consistency projection in `tantra_examples/backtest.py` —
-    both fixed in the tantra-examples checkout, committed locally there).
-  - `test_run_chain.py` stays honestly skipped on the absent 1D NSE Parquet
-    catalog (no data fabrication).
-  - `registry.json` at the catalog root (the harness loader's catalog marker;
-    registers the declarative `signal.alpha30_factor` step manifest).
-  - `tools/validate_chain.py` — `schema_errors(manifest)` (structural checks on
-    the pipeline `describe()`/`step.toml` shape) + `validate_chain(manifests)`
-    (chain semantics: kind order screen→filter→signal→size→risk→execute,
-    shape/column handoff, `with` params vs type/min/max/choices/pattern,
-    `report` vs `emits.reportable`). Loaded by tantra-examples via
-    `load_catalog_tool("validate_chain")`.
-  - `catalog_steps/signal/alpha30_factor/step.toml` — declarative-only `signal`
-    step (consumes `universe`, emits `orders`); no runnable strategy class yet
-    (gap 0007).
-  - Gap doc `docs/gaps/0007-signal-step-manifests-declarative-only.md` + index
-    (also records the follow-on: enabling the catalog unskips the examples
-    integration tests 06/07/run_chain, which then fail on missing *runnable*
-    catalog strategies / 1D NSE data — fix belongs to `tantra-strategies` +
-    `tantra-data`, not the validator).
-  - Gates: `tantra-examples` `test_pipeline_chain.py` +
-    `test_pipeline_manifests.py` fully green (44 collected); this repo's pytest
-    green (181, exit 0); `ruff check` + `ruff format --check` clean.
+* **Architectural-analysis unification (2026-11-20, root `docs/plans/Here is an architectural analysis of the.md` §2/§3)** — all landed:
+  - One Decimal indicator kernel: `sdk/indicators.py` wraps `tantra_library` (EMA/RSI/Bollinger added) (`268b368`); strict `decimal` step param type (`tools/validate_chain.py`, `schema/step.schema.json` rewritten for `catalog_steps`).
+  - EE+ / ORB-15 / outer-buffer stop registered in `tantra_library` (`tantra_library/zones.py`, `ind.elephant-zones`, `ind.opening-range`, `det.ee-sweep`, `det.orb15-breakout`, `prim.outer-buffer-stop`) (`d4d8045`).
+  - Gap 0008 closed: SDK OCO `Strategy.bracket` + intrabar stop/target fills in `SimulatedContext` (`fe5b170`).
+  - PR recipes emit `OverlayScene` + `stop_policy` (`5874557`); `WheelSdkBridge` (position reconciliation) + runnable `catalog_steps/signal/pr_{trend_pullback,vidya_breakout}`; `Entry.runnable_step` (`2e233fc`).
+  - Legacy `catalog/` retired into `manifests/strategies/` (`c08867c`); two catalogs remain: `catalog_steps/`+`registry.json` and `manifests/`.
+  - `LakehouseBarSource` (tantra-data `LakehouseBarReader`, env `TANTRA_LIBRARY_LAKEHOUSE_ROOT`) closes data gap 0026 (`9299121`); generic `tantra_library.scene_projection` + MCP `overlay_scene` flag (`5a2a595`); search lists by kind without a query, limit <= 200 (`628b348`).
+* Gap 0007 closed 2026-11-17 (runnable `equal_weight` / `alpha30_factor` catalog steps).
 
 ## Phase / Slice Status
 * **Gap 0006 / plan 0001 §7 SHIPPED (2026-11-14)**: SDK stop-protection +
@@ -95,13 +63,10 @@
   CamelCase, `__version__`, then lowercase functions).
 
 ## Immediate Next Step
-* **Plan 0001 (EE+) — the strategy itself**: build `ElephantEdgeStrategy`
-  (`strategies/`) on the shipped SDK surface — level-map fusion + confluence
-  scoring, signal generation, SL/TSL wiring — pending upstream
-  `tantra-core` (plan 0003 / gap 0002), `tantra-market` (gap 0005),
-  `tantra-data` (gap 0016), `tantra-exec` (gap 0003), `tantra-risk` (gap 0005),
-  `tantra-ledger` (gap 0012). See
-  `docs/plans/0001-elephant-edge-strategy.md`.
+* Indicator Lab tab UI in `tantra-ui-web` (its plan 0017: client + `OverlayScenePrimitive` renderer are done) and
+  root plan 0015 Track T21.6 agent loop tools (`strategy_loop_eval`, `chart_scene_annotate`, ...).
+* `pr_trend_pullback` wheel step: add a deterministic series that triggers an entry in
+  `tests/integration/test_catalog_runnable.py` (today only the no-error/scene path is asserted).
 
 ## Operating Invariants
 * Zero floats in financial math; `Parameter` bounds/step validated at
