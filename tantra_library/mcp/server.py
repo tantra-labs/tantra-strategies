@@ -14,6 +14,7 @@ from tantra_library import EntryKind, VolumeQuality, default_registry
 from tantra_library.bar_source import BarSource, bar_source_from_env, bars_from_json
 from tantra_library.errors import InvalidParam, LibraryError
 from tantra_library.registry import Registry
+from tantra_library.scene_projection import frame_to_scene, study_to_scene
 from tantra_library.study import EventFilter, signal_study
 from tantra_strategies.sdk.bar import Bar
 
@@ -72,6 +73,7 @@ TOOLS: list[dict[str, object]] = [
                 "params": {"type": "object"},
                 **_BARS_PROPS,
                 "tail": {"type": "integer", "minimum": 1, "maximum": 2000, "default": 200},
+                "overlay_scene": {"type": "boolean", "default": False},
             },
             ["id", "instrument"],
         ),
@@ -101,6 +103,7 @@ TOOLS: list[dict[str, object]] = [
                 ),
                 **_BARS_PROPS,
                 "max_events": {"type": "integer", "minimum": 1, "maximum": 500, "default": 100},
+                "overlay_scene": {"type": "boolean", "default": False},
             },
             ["id", "event_column", "instrument"],
         ),
@@ -114,6 +117,13 @@ def _default(o: object) -> str:
     if isinstance(o, datetime):
         return o.isoformat()
     raise TypeError(type(o).__name__)
+
+
+def _bool_arg(args: Mapping[str, object], key: str) -> bool:
+    v = args.get(key, False)
+    if not isinstance(v, bool):
+        raise InvalidParam(f"'{key}' must be a boolean")
+    return v
 
 
 def _dumps(o: object) -> str:
@@ -261,6 +271,7 @@ class LibraryMcpServer:
                 return _dumps(reg.get(eid).to_dict())
             raise InvalidParam("format must be 'markdown' or 'json'")
         if name == "tantra_indicator_compute":
+            want_scene = _bool_arg(args, "overlay_scene")
             bars, vq = self._load_bars(args)
             frame = reg.evaluate(
                 _str_arg(args, "id"), _obj_arg(args, "params"), bars, source_volume_quality=vq
@@ -274,8 +285,18 @@ class LibraryMcpServer:
             d["timestamps"] = ts[-tail:]
             d["columns"] = {k: v[-tail:] for k, v in cols.items()}
             d["total_rows"] = total
+            if want_scene:
+                d["overlay_scene"] = frame_to_scene(
+                    reg.get(frame.entry_id),
+                    frame,
+                    bars,
+                    symbol=_str_arg(args, "instrument"),
+                    timeframe=_str_arg(args, "interval", "1d"),
+                    tail=tail,
+                ).to_dict()
             return _dumps(d)
         if name == "tantra_signal_study":
+            want_scene = _bool_arg(args, "overlay_scene")
             bars, vq = self._load_bars(args)
             hz = args.get("horizons", [1, 3, 5, 10, 20])
             if not isinstance(hz, list) or not all(
@@ -311,7 +332,15 @@ class LibraryMcpServer:
                 source_volume_quality=vq,
                 max_events_listed=_int_arg(args, "max_events", 100, 1, 500),
             )
-            return _dumps(res.to_dict())
+            out = res.to_dict()
+            if want_scene:
+                out["overlay_scene"] = study_to_scene(
+                    res,
+                    bars,
+                    symbol=_str_arg(args, "instrument"),
+                    timeframe=_str_arg(args, "interval", "1d"),
+                ).to_dict()
+            return _dumps(out)
         raise InvalidParam(f"unknown tool '{name}'")
 
     def _load_bars(self, args: Mapping[str, object]) -> tuple[list[Bar], VolumeQuality]:
