@@ -80,6 +80,7 @@ from tantra_strategies.sdk.scene import (
 from tantra_strategies.sdk.stop_protection import StopProtection, StopUpdate, TrailMode
 from tantra_strategies.sdk.strategy import Strategy
 from tantra_strategies.sdk.tick import Tick
+from tantra_strategies.sdk.wheel_bridge import WheelSdkBridge
 
 __all__ = [
     "ATR",
@@ -151,6 +152,7 @@ __all__ = [
     "TimeInForce",
     "TradeConnectorSpec",
     "TrailMode",
+    "WheelSdkBridge",
     "ZoneBandSpec",
     "ZoneExtractionContext",
     "ZoneExtractor",

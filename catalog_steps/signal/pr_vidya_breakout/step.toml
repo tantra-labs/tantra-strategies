@@ -1,0 +1,136 @@
+# Predictive Ranges VIDYA Breakout runnable signal step (root plan 0016), run via strategy.py + config.toml.
+schema = 1
+id = "signal.pr_vidya_breakout"
+kind = "signal"
+title = "Predictive Ranges VIDYA Breakout"
+description = "Breakouts through pinned Predictive Ranges levels filtered by VIDYA trend and volume delta (recipe.pr-vidya-breakout)."
+tags = ["predictive_ranges", "signal", "breakout", "vidya", "recipe"]
+version = "1.0.0"
+strategy_api_version = "1.0.0"
+
+[params.length]
+type = "int"
+description = "Predictive Ranges lookback length."
+default = 200
+min = 2
+max = 2000
+step = 1
+
+[params.factor]
+type = "decimal"
+description = "Range width factor."
+default = "6"
+min = "1"
+max = "20"
+step = "0.5"
+
+[params.vidya_length]
+type = "int"
+description = "VIDYA length."
+default = 10
+min = 1
+max = 500
+step = 1
+
+[params.vidya_momentum]
+type = "int"
+description = "VIDYA momentum length."
+default = 20
+min = 1
+max = 500
+step = 1
+
+[params.vidya_smoothing]
+type = "int"
+description = "VIDYA smoothing length."
+default = 15
+min = 1
+max = 500
+step = 1
+
+[params.vidya_atr_length]
+type = "int"
+description = "VIDYA ATR length."
+default = 200
+min = 1
+max = 2000
+step = 1
+
+[params.band_multiplier]
+type = "decimal"
+description = "VIDYA band multiplier."
+default = "2"
+min = "0.1"
+max = "10"
+step = "0.1"
+
+[params.delta_threshold]
+type = "decimal"
+description = "Volume delta threshold (percent)."
+default = "30"
+min = "0"
+max = "100"
+step = "1"
+
+[params.reward_risk]
+type = "decimal"
+description = "Target reward-to-risk multiple."
+default = "1.5"
+min = "0.5"
+max = "10"
+step = "0.1"
+
+[params.pivot_left]
+type = "int"
+description = "Swing pivot bars to the left."
+default = 5
+min = 1
+max = 100
+step = 1
+
+[params.pivot_right]
+type = "int"
+description = "Swing pivot bars to the right."
+default = 5
+min = 1
+max = 100
+step = 1
+
+[params.stop_buffer_atr]
+type = "decimal"
+description = "ATR buffer beyond the stop anchor."
+default = "0.25"
+min = "0"
+max = "2"
+step = "0.05"
+
+[params.qty]
+type = "decimal"
+description = "Order quantity per entry."
+default = "1"
+min = "1"
+max = "100000"
+step = "1"
+
+[params.allow_short]
+type = "bool"
+description = "Allow short entries."
+default = true
+
+[params.stop_policy]
+type = "enum"
+description = "Stop placement policy."
+default = "recipe"
+choices = ["recipe", "tight_center", "outer_edge", "outer_atr_buffer", "percentile_shield"]
+
+[requires]
+
+[consumes]
+shape = "universe"
+columns = ["symbol"]
+
+[emits]
+shape = "orders"
+adds = []
+report = []
+reportable = []

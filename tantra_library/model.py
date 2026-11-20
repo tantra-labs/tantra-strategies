@@ -181,6 +181,7 @@ class Entry:
     related: tuple[str, ...] = ()
     provenance: Provenance | None = None
     body_md: str = ""
+    runnable_step: str | None = None
     factory: Factory | None = field(default=None, compare=False, repr=False)
 
     @property
@@ -205,6 +206,7 @@ class Entry:
             "related": list(self.related),
             "provenance": None if self.provenance is None else self.provenance.to_dict(),
             "body_md": self.body_md,
+            "runnable_step": self.runnable_step,
             "computable": self.computable,
         }
 

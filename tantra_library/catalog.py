@@ -1005,6 +1005,7 @@ def _recipes() -> list[Entry]:
             concepts=("concept.trend-pullback", "concept.r-multiple", "concept.support-resistance"),
             depends_on=("det.pr-trend-regime", "det.pr-zone-touch", "det.reversal-bar", "ind.atr"),
             body_md=_PULLBACK_MD,
+            runnable_step="signal.pr_trend_pullback",
         ),
         Entry(
             "recipe.pr-vidya-breakout",
@@ -1021,6 +1022,7 @@ def _recipes() -> list[Entry]:
                 "ind.atr",
             ),
             body_md=_BREAKOUT_MD,
+            runnable_step="signal.pr_vidya_breakout",
         ),
     ]
 

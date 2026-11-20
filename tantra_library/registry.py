@@ -172,6 +172,8 @@ class Registry:
             lines += [e.summary, ""]
         if e.body_md:
             lines += [e.body_md.strip(), ""]
+        if e.runnable_step:
+            lines += [f"Runnable step: `{e.runnable_step}`", ""]
         if e.params:
             lines += [
                 "## Parameters",

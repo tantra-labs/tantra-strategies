@@ -1,0 +1,14 @@
+name = "pr_trend_pullback"
+symbol = "NSE:NIFTY50-INDEX"
+exchange = "NSE"
+
+[params]
+length = 200
+factor = "6"
+regime_steps = 2
+lookback = 3
+stop_buffer_atr = "0.25"
+require_alligator = true
+qty = "1"
+allow_short = true
+stop_policy = "recipe"

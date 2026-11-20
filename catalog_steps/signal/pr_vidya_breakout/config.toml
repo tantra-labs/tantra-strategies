@@ -1,0 +1,20 @@
+name = "pr_vidya_breakout"
+symbol = "NSE:NIFTY50-INDEX"
+exchange = "NSE"
+
+[params]
+length = 200
+factor = "6"
+vidya_length = 10
+vidya_momentum = 20
+vidya_smoothing = 15
+vidya_atr_length = 200
+band_multiplier = "2"
+delta_threshold = "30"
+reward_risk = "1.5"
+pivot_left = 5
+pivot_right = 5
+stop_buffer_atr = "0.25"
+qty = "1"
+allow_short = true
+stop_policy = "recipe"

@@ -25,12 +25,21 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+_RUNNABLE = [
+    "equal_weight",
+    "alpha30_factor",
+    "elephant_edge_v3",
+    "pr_trend_pullback",
+    "pr_vidya_breakout",
+]
+
+
 def _registry() -> dict[str, dict[str, str]]:
     data = json.loads((ROOT / "registry.json").read_text(encoding="utf-8"))
     return {entry["name"]: entry for entry in data["strategies"]}
 
 
-@pytest.mark.parametrize("name", ["equal_weight", "alpha30_factor", "elephant_edge_v3"])
+@pytest.mark.parametrize("name", _RUNNABLE)
 def test_registry_entry_points_at_a_runnable_directory(name: str) -> None:
     directory = ROOT / _registry()[name]["path"]
     assert (directory / "strategy.py").is_file()
@@ -38,7 +47,7 @@ def test_registry_entry_points_at_a_runnable_directory(name: str) -> None:
     assert (directory / "step.toml").is_file()
 
 
-@pytest.mark.parametrize("name", ["equal_weight", "alpha30_factor", "elephant_edge_v3"])
+@pytest.mark.parametrize("name", _RUNNABLE)
 def test_step_manifest_is_schema_valid(name: str) -> None:
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
@@ -224,3 +233,60 @@ def test_decimal_param_rejects_float_and_out_of_range() -> None:
     assert any("below min" in e for e in vc._check_param_value("s", "p", "-0.1", spec))
     bad = {"id": "signal.x", "kind": "signal", "params": {"p": {**spec, "min": 0.1}}}
     assert any("min must be a decimal" in e for e in vc.schema_errors(bad))
+
+
+def _pr_wheel_run(name: str, params: dict[str, object], closes: list[float]):
+    from tantra.bar import Bar as WheelBar
+    from tantra.context import LedgerContext
+    from tantra.instrument import InstrumentId
+    from tantra.money import Currency, Money
+
+    loaded = _load_named(name)
+    strategy = loaded.instantiate()
+    for key, value in params.items():
+        setattr(strategy, key, value)
+    ctx = LedgerContext(cash=Money.from_major(1_000_000, Currency.INR))
+    strategy.bind(ctx)
+    strategy.on_start()
+    iid = InstrumentId("NIFTY50-INDEX", "NSE")
+    start = dt.datetime(2026, 5, 4, 9, 15, tzinfo=dt.UTC)
+    prev = closes[0]
+    for i, close in enumerate(closes):
+        ts = start + dt.timedelta(minutes=i)
+        hi = max(prev, close) + 0.5
+        lo = min(prev, close) - 0.5
+        strategy.on_bar(WheelBar(iid, ts, prev, hi, lo, close, 100_000 + (i % 7) * 10_000))
+        prev = close
+    return strategy, ctx
+
+
+def _wavy_series(n: int = 400) -> list[float]:
+    import math
+
+    return [round(100 + i * 0.05 + 6 * math.sin(i / 7.0), 2) for i in range(n)]
+
+
+@pytest.mark.parametrize(
+    ("name", "scene_id", "params"),
+    [
+        ("pr_trend_pullback", "recipe.pr-trend-pullback", {"length": 20, "factor": "2"}),
+        (
+            "pr_vidya_breakout",
+            "recipe.pr-vidya-breakout",
+            {"length": 20, "factor": "2", "vidya_atr_length": 20, "delta_threshold": "0"},
+        ),
+    ],
+)
+def test_pr_steps_run_on_the_wheel_ledger(
+    name: str, scene_id: str, params: dict[str, object]
+) -> None:
+    strategy, ctx = _pr_wheel_run(name, params, _wavy_series())
+    assert getattr(strategy, "name", None) == name
+    assert strategy.emit_scene().strategy_id == scene_id
+    intents = ctx.drain_intents()
+    if name == "pr_vidya_breakout":
+        # deterministic wavy series triggers at least one breakout entry
+        assert intents
+        assert all(intent.quantity > 0 for intent in intents)
+    # pr_trend_pullback: no entry on this series; the no-error + scene path is the contract.
+    strategy.on_stop()

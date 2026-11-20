@@ -1,5 +1,5 @@
 {
-  "note": "Catalog root marker for the tantra-examples harness loader: find_catalog() accepts this directory as the tantra-strategies catalog because registry.json exists here. The strategies list registers step manifests (step.toml files) that are validated AND runnable: each path directory ships strategy.py + config.toml + step.toml so load_named(name) and the chain validator both work (gap 0007).",
+  "note": "Catalog root marker for the tantra-examples harness loader: find_catalog() accepts this directory as the tantra-strategies catalog because registry.json exists here. The strategies list registers step manifests (step.toml files) that are validated AND runnable: each path directory ships strategy.py + config.toml + step.toml so load_named(name) and the chain validator both work (gap 0007). The Predictive Ranges recipe steps (pr_trend_pullback, pr_vidya_breakout) are the runnable counterparts of recipe.pr-trend-pullback / recipe.pr-vidya-breakout in tantra_library, built on WheelSdkBridge.",
   "strategies": [
     {
       "name": "alpha30_factor",
@@ -15,6 +15,16 @@
       "name": "equal_weight",
       "category": "portfolio",
       "path": "catalog_steps/portfolio/equal_weight"
+    },
+    {
+      "name": "pr_trend_pullback",
+      "category": "signal",
+      "path": "catalog_steps/signal/pr_trend_pullback"
+    },
+    {
+      "name": "pr_vidya_breakout",
+      "category": "signal",
+      "path": "catalog_steps/signal/pr_vidya_breakout"
     }
   ]
 }
