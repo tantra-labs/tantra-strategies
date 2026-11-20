@@ -154,3 +154,24 @@ def test_subprocess_smoke() -> None:
     )
     lines = [json.loads(x) for x in p.stdout.splitlines() if x.strip()]
     assert [m["id"] for m in lines] == [1, 2]
+
+
+def test_search_lists_by_kind_without_query() -> None:
+    """Agents/runtime list entries by kind without a text query (tantra-agent-core contract)."""
+    reply = LibraryMcpServer().handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "tantra_library_search",
+                "arguments": {"kind": "composite", "limit": 200},
+            },
+        }
+    )
+    assert reply is not None
+    result = reply["result"]
+    assert result["isError"] is False, result
+    items = json.loads(result["content"][0]["text"])
+    assert {i["kind"] for i in items} == {"composite"}
+    assert any(i["id"] == "ind.predictive-ranges" for i in items)

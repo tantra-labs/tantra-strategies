@@ -42,15 +42,18 @@ def _schema(props: Mapping[str, object], required: list[str]) -> dict[str, objec
 TOOLS: list[dict[str, object]] = [
     {
         "name": "tantra_library_search",
-        "description": "Search the concept & indicator library by text, kind or family.",
+        "description": (
+            "Search the concept & indicator library by text, kind or family "
+            "(omit 'query' to list entries of a kind/family)."
+        ),
         "inputSchema": _schema(
             {
-                "query": {"type": "string"},
+                "query": {"type": "string", "default": ""},
                 "kind": {"type": "string", "enum": [k.value for k in EntryKind]},
                 "family": {"type": "string"},
-                "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 10},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 10},
             },
-            ["query"],
+            [],
         ),
     },
     {
@@ -247,7 +250,7 @@ class LibraryMcpServer:
             if fam is not None and not isinstance(fam, str):
                 raise InvalidParam("'family' must be a string")
             found = reg.search(
-                _str_arg(args, "query"), kind, fam, _int_arg(args, "limit", 10, 1, 50)
+                _str_arg(args, "query", ""), kind, fam, _int_arg(args, "limit", 10, 1, 200)
             )
             return _dumps(
                 [
