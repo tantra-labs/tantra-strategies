@@ -15,7 +15,16 @@ the remaining future work is enumerated below.
 
 | # | Title | Plan |
 |---|-------|------|
-| _None_ | | |
+| [0009](0009-live-context-parity.md) | Wheel bridge/LiveContext break research-live parity: private simulator, no fill events, no cancel/resync | [0006](../plans/0006-design-review-2026-11.md) |
+| [0010](0010-order-request-idempotency-key.md) | `OrderRequest` has no client order id; `SIM-n` counters | [0006](../plans/0006-design-review-2026-11.md) |
+| [0011](0011-sizing-and-helper-duplication.md) | Duplicated sizing, percentile and IST helpers across strategies | [0006](../plans/0006-design-review-2026-11.md) |
+| [0012](0012-typed-validated-parameters.md) | `Parameter` untyped/unvalidated; unknown overrides and floats accepted | [0006](../plans/0006-design-review-2026-11.md) |
+| [0013](0013-sdk-library-import-cycle.md) | Import cycle between `tantra_strategies.sdk` and `tantra_library` | [0006](../plans/0006-design-review-2026-11.md) |
+| [0014](0014-library-provenance-and-licensing.md) | Library provenance and licence labelling (attribution, SPDX, NOTICE) | [0006](../plans/0006-design-review-2026-11.md) |
+| [0015](0015-promotion-evidence-digest.md) | Promotion evidence not bound to code, params or data snapshot | [0006](../plans/0006-design-review-2026-11.md) |
+| [0016](0016-package-data-and-py-typed.md) | Manifests/catalog not packaged; no `py.typed` | [0006](../plans/0006-design-review-2026-11.md) |
+| [0017](0017-dependency-pins-and-wheel-contract.md) | Dependency pins and wheel version contract | [0006](../plans/0006-design-review-2026-11.md) |
+| [0018](0018-simulated-context-fill-model.md) | `SimulatedContext` fills at close without tick rounding, fees or slippage | [0006](../plans/0006-design-review-2026-11.md) |
 
 ## Closed Gaps
 
