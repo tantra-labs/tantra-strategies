@@ -15,7 +15,7 @@ Closes the SDK items of Qullamaggie gap row 22 (root plan 0009): `partial_exit`,
 - `sdk/strategy.py`: `stop_loss(side, level_band, buffer_atr)` is level-band only; `trail_stop(...)` never widens; `_emit_stop_update` has no external caller; only buy/sell market/limit. Also overlaps with `tantra.declarative.DeclarativeStrategy` in `tantra-ffi` (reconciled in `tantra-ffi` plan 0004 P4).
 - `sdk/order.py`: `OrderRequest` has no trigger price (`StopAbove`/`StopBelow`). `sdk/levels.py`: `PositionIntent` has a single target.
 - No `ctx.equity()`, no partial-exit intent, no `ChartPattern` helper. Related: plan [0001](README.md) (EE+ strategy — **implemented 2026-11-17, T12.4**), plan [0002](0002-universe-screen-context.md) (see closed gap `0006` in [`gaps/README.md`](../gaps/README.md#closed-gaps)).
-- Upstream: `tantra-core/docs/plans/0005-trade-planner-and-manager.md`, `tantra-market/docs/plans/0002-chart-pattern-analyzer.md`, `tantra-ffi/docs/plans/0004-trade-planner-bindings.md`, `tantra-market/docs/gaps/README.md#closed-gaps` (gap `0007` closed 2026-11-24).
+- Upstream: `tantra-core/docs/plans/README.md#implemented-plans`, `tantra-market/docs/plans/0002-chart-pattern-analyzer.md`, `tantra-ffi/docs/plans/0004-trade-planner-bindings.md`, `tantra-market/docs/gaps/README.md#closed-gaps` (gap `0007` closed 2026-11-24).
 
 ## 2. Component Specifications & Phases
 
