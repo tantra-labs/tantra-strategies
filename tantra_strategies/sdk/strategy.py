@@ -12,7 +12,9 @@ from tantra_strategies.sdk.indicators import (
     EMA,
     RSI,
     SMA,
+    AdrPct,
     BollingerBands,
+    ChandelierExit,
     Indicator,
 )
 from tantra_strategies.sdk.order import (
@@ -33,7 +35,7 @@ class IndicatorRegistry:
     """
 
     def __init__(self) -> None:
-        self._store: dict[tuple[object, ...], Indicator | BollingerBands] = {}
+        self._store: dict[tuple[object, ...], Indicator | BollingerBands | ChandelierExit] = {}
 
     def sma(self, instrument: str, period: int) -> SMA:
         return self._get(("sma", instrument, period), SMA(period))  # type: ignore[return-value]
@@ -47,6 +49,9 @@ class IndicatorRegistry:
     def atr(self, instrument: str, period: int = 14) -> ATR:
         return self._get(("atr", instrument, period), ATR(period))  # type: ignore[return-value]
 
+    def adr_pct(self, instrument: str, period: int = 20) -> AdrPct:
+        return self._get(("adr_pct", instrument, period), AdrPct(period))  # type: ignore[return-value]
+
     def bollinger(
         self, instrument: str, period: int = 20, deviations: Decimal | int = 2
     ) -> BollingerBands:
@@ -55,9 +60,20 @@ class IndicatorRegistry:
             self._store[key] = BollingerBands(period, deviations)
         return self._store[key]  # type: ignore[return-value]
 
+    def chandelier_exit(
+        self,
+        instrument: str,
+        period: int = 22,
+        mult: Decimal | int | str = Decimal("3"),
+    ) -> ChandelierExit:
+        key = ("chandelier_exit", instrument, period, str(mult))
+        if key not in self._store:
+            self._store[key] = ChandelierExit(period, mult)
+        return self._store[key]  # type: ignore[return-value]
+
     def _get(
-        self, key: tuple[object, ...], indicator: Indicator | BollingerBands
-    ) -> Indicator | BollingerBands:
+        self, key: tuple[object, ...], indicator: Indicator | BollingerBands | ChandelierExit
+    ) -> Indicator | BollingerBands | ChandelierExit:
         if key not in self._store:
             self._store[key] = indicator
         return self._store[key]

@@ -12,6 +12,8 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from tantra.indicators.volatility.chandelier_exit import ChandelierExitValue
+
 from tantra_strategies.sdk.bar import Bar
 
 if TYPE_CHECKING:
@@ -143,6 +145,69 @@ class ATR(Indicator):
         if v is None:
             raise ValueError("ATR is not ready")
         return v
+
+
+class AdrPct(Indicator):
+    """Average Daily Range %, fed one ``Bar`` at a time."""
+
+    def __init__(self, period: int = 20) -> None:
+        super().__init__(period)
+        from tantra.indicators.volatility.adr_pct import AdrPct as _AdrPct
+
+        self._inner = _AdrPct(period)
+
+    def update(self, bar: Bar) -> None:
+        self._inner.update(bar.high, bar.low)
+
+    @property
+    def ready(self) -> bool:
+        return self._inner.value is not None
+
+    @property
+    def value(self) -> Decimal:
+        v = self._inner.value
+        if v is None:
+            raise ValueError("AdrPct is not ready")
+        return v
+
+
+class ChandelierExit:
+    """Chandelier Exit (long and short trailing stops), fed one ``Bar`` at a time."""
+
+    def __init__(self, period: int = 22, mult: Decimal | int | str = 3) -> None:
+        if period <= 0:
+            raise ValueError("period must be positive")
+        from tantra.indicators.volatility.chandelier_exit import (
+            ChandelierExit as _ChandelierExit,
+        )
+
+        self.period = period
+        self.mult = mult if isinstance(mult, Decimal) else Decimal(str(mult))
+        if not self.mult.is_finite() or self.mult < 0:
+            raise ValueError("mult must be a finite, non-negative Decimal")
+        self._inner = _ChandelierExit(period, self.mult, include_first_bar=True)
+
+    def update(self, bar: Bar) -> None:
+        self._inner.update(bar.high, bar.low, bar.close)
+
+    @property
+    def ready(self) -> bool:
+        return self._inner.value is not None
+
+    @property
+    def value(self) -> ChandelierExitValue:
+        v = self._inner.value
+        if v is None:
+            raise ValueError("ChandelierExit is not ready")
+        return v
+
+    @property
+    def long_stop(self) -> Decimal:
+        return self.value.long_stop
+
+    @property
+    def short_stop(self) -> Decimal:
+        return self.value.short_stop
 
 
 class BollingerBands:

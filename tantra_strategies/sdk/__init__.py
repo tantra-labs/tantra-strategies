@@ -12,7 +12,10 @@ from tantra_strategies.sdk.indicators import (
     EMA,
     RSI,
     SMA,
+    AdrPct,
     BollingerBands,
+    ChandelierExit,
+    ChandelierExitValue,
     Indicator,
 )
 from tantra_strategies.sdk.levels import (
@@ -87,9 +90,12 @@ __all__ = [
     "EMA",
     "RSI",
     "SMA",
+    "AdrPct",
     "AssetClass",
     "Bar",
     "BollingerBands",
+    "ChandelierExit",
+    "ChandelierExitValue",
     "ChartPointSpec",
     "ElephantZonesExtractor",
     "EntryTriggerMode",

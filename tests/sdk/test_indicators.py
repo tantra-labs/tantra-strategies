@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from decimal import Decimal
 
-from tantra_strategies.sdk import Bar
+from tantra_strategies.sdk import Bar, Strategy
 from tantra_strategies.sdk.indicators import (
     ATR,
     EMA,
     RSI,
     SMA,
+    AdrPct,
     BollingerBands,
+    ChandelierExit,
+    ChandelierExitValue,
     crosses_above,
     crosses_below,
 )
@@ -69,8 +73,6 @@ def test_atr_tracks_true_range() -> None:
 
 
 def _bar(i: int) -> Bar:
-    from datetime import UTC, datetime
-
     close = D(i + 10)
     return Bar(
         instrument="X",
@@ -79,6 +81,17 @@ def _bar(i: int) -> Bar:
         high=close + D("2"),
         low=close - D("2"),
         close=close,
+    )
+
+
+def _ohlc(high: str, low: str, close: str) -> Bar:
+    return Bar(
+        instrument="X",
+        ts=datetime(2024, 1, 1, tzinfo=UTC),
+        open=D(close),
+        high=D(high),
+        low=D(low),
+        close=D(close),
     )
 
 
@@ -93,3 +106,26 @@ def test_bollinger_bands_symmetry() -> None:
     # Exact Decimal sqrt rounds at context precision; compare to a tolerance.
     assert abs(upper_leg - lower_leg) < D("1e-15")
     assert bands.upper > bands.middle > bands.lower
+
+
+def test_adr_pct_and_chandelier_in_indicator_registry() -> None:
+    strat = Strategy()
+    adr = strat.indicators.adr_pct("NSE:RELIANCE-EQ", period=2)
+    assert strat.indicators.adr_pct("NSE:RELIANCE-EQ", period=2) is adr
+    assert isinstance(adr, AdrPct)
+    adr.update(_ohlc("200", "100", "150"))
+    assert not adr.ready
+    adr.update(_ohlc("15", "10", "12"))
+    assert adr.ready
+    assert adr.value == D("75")
+
+    ce = strat.indicators.chandelier_exit("NSE:RELIANCE-EQ", period=2, mult=3)
+    assert strat.indicators.chandelier_exit("NSE:RELIANCE-EQ", period=2, mult=3) is ce
+    assert isinstance(ce, ChandelierExit)
+    ce.update(_ohlc("10", "8", "9"))
+    assert not ce.ready
+    ce.update(_ohlc("12", "9", "11"))
+    assert ce.ready
+    assert ce.value == ChandelierExitValue(D("4.5"), D("15.5"))
+    assert ce.long_stop == D("4.5")
+    assert ce.short_stop == D("15.5")
