@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -11,7 +12,7 @@ from tantra_strategies import Bar
 
 
 def make_bars(
-    closes: list[Decimal | int | str],
+    closes: Sequence[Decimal | int | str],
     instrument: str = "NSE:NIFTY50-INDEX",
     start: datetime | None = None,
 ) -> list[Bar]:
@@ -44,8 +45,8 @@ def trending_closes() -> list[Decimal]:
 
 
 def basket_bars(
-    members: list[str],
-    closes: list[list[Decimal | int | str]],
+    members: Sequence[str],
+    closes: Sequence[Sequence[Decimal | int | str]],
     start: datetime | None = None,
 ) -> list[Bar]:
     """Interleaved daily bars for a basket: one bar per member per session day.
