@@ -130,7 +130,10 @@ def run_basket(
             events=tuple(context.events),
         )
     total_position_fraction = _position_fraction(runs, basket.combined_capital)
-    total_realized_pnl = sum(realized_pnl(run.context.events) for run in runs.values())
+    total_realized_pnl = sum(
+        (realized_pnl(run.context.events) for run in runs.values()),
+        Decimal(0),
+    )
     _enforce_budget(basket.risk_budget, total_position_fraction, total_realized_pnl)
     return BasketRunResult(
         allocations={m.name: a for m, a in zip(basket.member_strategies, allocations, strict=True)},
@@ -147,9 +150,12 @@ def _position_fraction(runs: Mapping[str, BasketMemberRun], combined_capital: De
     public API exposes no aggregate position ledger (gap 0004).
     """
     notional = sum(
-        abs(position) * run.context.current_price(instrument)
-        for run in runs.values()
-        for instrument, position in run.context._positions.items()
+        (
+            abs(position) * run.context.current_price(instrument)
+            for run in runs.values()
+            for instrument, position in run.context._positions.items()
+        ),
+        Decimal(0),
     )
     return notional / combined_capital
 

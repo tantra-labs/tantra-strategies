@@ -28,7 +28,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
-from tantra_strategies.sdk import Parameter, Strategy
+from tantra_strategies.sdk import Bar, Parameter, Strategy
 
 # --- canonical enums (mirror the Rust-side contracts) -----------------------------
 
@@ -354,7 +354,7 @@ class CompositeSignalStrategy(Strategy):
             flows=flows,
         )
 
-    def on_bar(self, bar) -> None:
+    def on_bar(self, bar: Bar) -> None:
         signal = self._signals.get(bar.instrument)
         if signal is None:
             return

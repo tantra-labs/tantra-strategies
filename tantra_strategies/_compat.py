@@ -8,6 +8,9 @@ keep the SDK fully offline-testable.
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
+
+TantraDecimal: Any
 
 try:  # pragma: no cover - exercised only when the native wheel is absent
     from tantra import Decimal as TantraDecimal

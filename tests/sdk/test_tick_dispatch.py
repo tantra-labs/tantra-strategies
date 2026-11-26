@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import FrozenInstanceError
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -21,7 +22,7 @@ from tantra_strategies.sdk.levels import LevelMap, OptionsSnapshot
 
 
 def make_ticks(
-    prices: list[Decimal | int | str],
+    prices: Sequence[Decimal | int | str],
     instrument: str = "NSE:NIFTY50-INDEX",
 ) -> list[Tick]:
     """Build a one-minute tick sequence from last-trade prices."""
@@ -89,13 +90,13 @@ class BuyLimitOnFirstTickStrategy(RecordingTickStrategy):
 
 def test_tick_model_coerces_and_validates() -> None:
     ts = datetime(2024, 1, 1, tzinfo=UTC)
-    tick = Tick(instrument="NSE:X", ts=ts, last_price="12.5")
+    tick = Tick(instrument="NSE:X", ts=ts, last_price=Decimal("12.5"))
     assert isinstance(tick.last_price, Decimal)
     assert tick.last_price == Decimal("12.5")
-    assert Tick(instrument="NSE:X", ts=ts, last_price=10).last_price == Decimal("10")
+    assert Tick(instrument="NSE:X", ts=ts, last_price=Decimal(10)).last_price == Decimal("10")
 
     with pytest.raises(ValueError):
-        Tick(instrument="NSE:X", ts=ts, last_price="-1")
+        Tick(instrument="NSE:X", ts=ts, last_price=Decimal("-1"))
     with pytest.raises(ValueError):
         Tick(
             instrument="NSE:X",

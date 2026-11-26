@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from tantra_strategies import StrategyManifest
+from tantra_strategies.strategies.turtle import TurtleBreakout
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 MANIFEST_DIR = ROOT / "manifests" / "strategies"
@@ -113,13 +114,14 @@ def test_unknown_fields_are_rejected() -> None:
 def test_instantiate_builds_a_working_strategy() -> None:
     manifest = StrategyManifest.load_toml(TURTLE)
     strategy = manifest.instantiate()
-    assert type(strategy).__name__ == "TurtleBreakout"
+    assert isinstance(strategy, TurtleBreakout)
     assert strategy.entry_period == 20
 
 
 def test_instantiate_supports_parameter_overrides() -> None:
     manifest = StrategyManifest.load_toml(TURTLE)
     strategy = manifest.instantiate(entry_period=30)
+    assert isinstance(strategy, TurtleBreakout)
     assert strategy.entry_period == 30
 
 

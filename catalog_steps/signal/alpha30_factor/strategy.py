@@ -15,7 +15,9 @@ class is what makes the step runnable rather than merely validated (gap 0007).
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
+from tantra.bar import Bar as WheelBar
 from tantra.base import Parameter, Strategy
 from tantra.instrument import InstrumentId
 from tantra.markets.india.universes import resolve_universe
@@ -54,7 +56,8 @@ class Alpha30Factor(Strategy):
             1, len(self._members) - 1
         )
 
-    def on_bar(self, bar: object) -> None:
+    def on_bar(self, bar: WheelBar, ctx: Any = None) -> None:
+        del ctx
         iid: InstrumentId = bar.instrument_id
         if iid in self._history:
             self._history[iid].append(bar.close)

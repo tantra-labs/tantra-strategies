@@ -21,8 +21,8 @@ STEPS = sorted(MANIFEST_DIR.rglob("*.toml"))
 def load_run_step() -> types.ModuleType:
     """Load ``tools/run_step.py`` by path (tools/ has no ``__init__.py``)."""
     spec = importlib.util.spec_from_file_location("run_step", ROOT / "tools" / "run_step.py")
+    assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
 

@@ -16,7 +16,9 @@ the same equal-weight rule (gap 0007).
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
+from tantra.bar import Bar as WheelBar
 from tantra.base import Parameter, Strategy
 from tantra.instrument import InstrumentId
 from tantra.markets.india.universes import resolve_universe
@@ -51,7 +53,8 @@ class EqualWeight(Strategy):
         """True once at least all-but-one member has priced (missing-data tolerant)."""
         return len(self._closes) >= max(1, len(self._members) - 1)
 
-    def on_bar(self, bar: object) -> None:
+    def on_bar(self, bar: WheelBar, ctx: Any = None) -> None:
+        del ctx
         iid: InstrumentId = bar.instrument_id
         self._closes[iid] = bar.close
         new_day = bar.ts != self._last_day

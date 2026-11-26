@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -20,7 +21,7 @@ MANIFESTS = sorted(MANIFEST_DIR.rglob("*.toml"))
 BASKETS = sorted(BASKET_DIR.rglob("*.toml"))
 
 
-def draft7_validator(schema: dict[str, object]) -> object:
+def draft7_validator(schema: dict[str, object]) -> Any:
     jsonschema = pytest.importorskip("jsonschema")
     return jsonschema.Draft7Validator(schema)
 

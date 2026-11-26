@@ -106,17 +106,25 @@ class CsvBarSource:
 
 
 class _ClosedBar(Protocol):
-    ts: datetime
-    open: Decimal
-    high: Decimal
-    low: Decimal
-    close: Decimal
-    volume: int
+    @property
+    def ts(self) -> datetime: ...
+    @property
+    def open(self) -> Decimal: ...
+    @property
+    def high(self) -> Decimal: ...
+    @property
+    def low(self) -> Decimal: ...
+    @property
+    def close(self) -> Decimal: ...
+    @property
+    def volume(self) -> int: ...
 
 
 class _PinnedBars(Protocol):
-    commit_sha: str
-    bars: Sequence[_ClosedBar]
+    @property
+    def commit_sha(self) -> str: ...
+    @property
+    def bars(self) -> Sequence[_ClosedBar]: ...
 
 
 class _BarReader(Protocol):

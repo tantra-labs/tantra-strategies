@@ -16,7 +16,7 @@ from __future__ import annotations
 import datetime as dt
 from collections.abc import Callable
 from decimal import Decimal
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from tantra_strategies.sdk.bar import Bar
 from tantra_strategies.sdk.context import SimulatedContext
@@ -152,7 +152,7 @@ class WheelSdkBridge:
             return OverlayScene(
                 strategy_id=self._empty_scene_id, symbol=self._instrument, timeframe="1m"
             )
-        return self._strategy.emit_scene()  # type: ignore[attr-defined,no-any-return]
+        return cast(OverlayScene, cast(Any, self._strategy).emit_scene())
 
     def stop(self) -> None:
         if self._strategy is not None:

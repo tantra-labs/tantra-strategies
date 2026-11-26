@@ -20,8 +20,12 @@ import sys
 import tomllib
 from decimal import Decimal
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+if TYPE_CHECKING:
+    from tantra.bar import Bar as WheelBar
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -38,6 +42,10 @@ _RUNNABLE = [
 def _registry() -> dict[str, dict[str, str]]:
     data = json.loads((ROOT / "registry.json").read_text(encoding="utf-8"))
     return {entry["name"]: entry for entry in data["strategies"]}
+
+
+def _ns(ts: dt.datetime) -> int:
+    return int(ts.timestamp()) * 1_000_000_000
 
 
 @pytest.mark.parametrize("name", _RUNNABLE)
@@ -72,7 +80,7 @@ def test_alpha30_step_keeps_the_declarative_orders_contract() -> None:
     assert manifest["params"] == {}
 
 
-def _load_named(name: str):
+def _load_named(name: str) -> Any:
     """``load_named`` through the tantra-examples harness (skips without it)."""
     pytest.importorskip("tantra")
     pytest.importorskip("tantra_examples")
@@ -104,7 +112,7 @@ def _alpha30_universe() -> list[str]:
     return [iid.symbol for iid in resolve_universe("nifty200_alpha_30", exchange="NSE")]
 
 
-def _feed_sessions(strategy: object, symbols: list[str], sessions: int) -> None:
+def _feed_sessions(strategy: Any, symbols: list[str], sessions: int) -> None:
     """Feed one deterministic daily bar per member per session through ``on_bar``."""
     from tantra.bar import Bar
     from tantra.instrument import InstrumentId
@@ -114,8 +122,8 @@ def _feed_sessions(strategy: object, symbols: list[str], sessions: int) -> None:
     for session in range(sessions):
         day = start + dt.timedelta(days=session)
         for i, symbol in enumerate(symbols):
-            price = 100.0 + session + i
-            strategy.on_bar(  # type: ignore[attr-defined]
+            price = Decimal(100 + session + i)
+            strategy.on_bar(
                 Bar(
                     InstrumentId(symbol, "NSE"),
                     session_ts(day),
@@ -123,7 +131,7 @@ def _feed_sessions(strategy: object, symbols: list[str], sessions: int) -> None:
                     price,
                     price,
                     price,
-                    1000,
+                    Decimal(1000),
                 )
             )
 
@@ -178,18 +186,48 @@ def test_elephant_edge_v3_submits_intents_and_emits_scene_via_wheel_ledger() -> 
     for day in (11, 12):
         for minute_idx in range(25):
             ts = dt.datetime(2026, 5, day, 9, 15, tzinfo=ist) + dt.timedelta(minutes=minute_idx)
-            lo = "94.0" if minute_idx == 10 else "99.0"
-            hi = "106.0" if minute_idx == 12 else "101.0"
-            strategy.on_bar(WheelBar(iid, ts, 100.0, float(hi), float(lo), 100.0, 100_000))
+            lo = Decimal("94.0") if minute_idx == 10 else Decimal("99.0")
+            hi = Decimal("106.0") if minute_idx == 12 else Decimal("101.0")
+            strategy.on_bar(
+                WheelBar(
+                    iid,
+                    _ns(ts),
+                    Decimal("100.0"),
+                    hi,
+                    lo,
+                    Decimal("100.0"),
+                    Decimal("100000"),
+                )
+            )
 
     # Day 13: open 100 -> S1 at 100 - 6 = 94, R1 at 100 + 6 = 106; feed warmup then hammer at S1=94
     for minute_idx in range(15):
         ts = dt.datetime(2026, 5, 13, 9, 15, tzinfo=ist) + dt.timedelta(minutes=minute_idx)
-        strategy.on_bar(WheelBar(iid, ts, 100.0, 101.0, 99.0, 100.0, 100_000))
+        strategy.on_bar(
+            WheelBar(
+                iid,
+                _ns(ts),
+                Decimal("100.0"),
+                Decimal("101.0"),
+                Decimal("99.0"),
+                Decimal("100.0"),
+                Decimal("100000"),
+            )
+        )
 
     # Hammer reversal at S1 (low 92.5, close 94.2, high 94.4, volume spike)
     t_sig = dt.datetime(2026, 5, 13, 9, 32, tzinfo=ist)
-    strategy.on_bar(WheelBar(iid, t_sig, 94.1, 94.4, 92.5, 94.2, 400_000))
+    strategy.on_bar(
+        WheelBar(
+            iid,
+            _ns(t_sig),
+            Decimal("94.1"),
+            Decimal("94.4"),
+            Decimal("92.5"),
+            Decimal("94.2"),
+            Decimal("400000"),
+        )
+    )
 
     intents = ctx.drain_intents()
     assert intents, "elephant_edge_v3 should submit entry order intents to wheel LedgerContext"
@@ -204,7 +242,7 @@ def test_elephant_edge_v3_submits_intents_and_emits_scene_via_wheel_ledger() -> 
     assert scene.hedges
 
 
-def _validate_chain_module():
+def _validate_chain_module() -> Any:
     spec = importlib.util.spec_from_file_location(
         "_validate_chain_dec", ROOT / "tools" / "validate_chain.py"
     )
@@ -236,7 +274,7 @@ def test_decimal_param_rejects_float_and_out_of_range() -> None:
     assert any("min must be a decimal" in e for e in vc.schema_errors(bad))
 
 
-def _pr_wheel_run(name: str, params: dict[str, object], closes: list[float]):
+def _pr_wheel_run(name: str, params: dict[str, object], closes: list[Decimal]) -> tuple[Any, Any]:
     from tantra.bar import Bar as WheelBar
     from tantra.context import LedgerContext
     from tantra.instrument import InstrumentId
@@ -251,20 +289,21 @@ def _pr_wheel_run(name: str, params: dict[str, object], closes: list[float]):
     strategy.on_start()
     iid = InstrumentId("NIFTY50-INDEX", "NSE")
     start = dt.datetime(2026, 5, 4, 9, 15, tzinfo=dt.UTC)
+    half = Decimal("0.5")
     prev = closes[0]
     for i, close in enumerate(closes):
-        ts = start + dt.timedelta(minutes=i)
-        hi = max(prev, close) + 0.5
-        lo = min(prev, close) - 0.5
-        strategy.on_bar(WheelBar(iid, ts, prev, hi, lo, close, 100_000 + (i % 7) * 10_000))
+        ts = _ns(start + dt.timedelta(minutes=i))
+        hi = max(prev, close) + half
+        lo = min(prev, close) - half
+        strategy.on_bar(WheelBar(iid, ts, prev, hi, lo, close, Decimal(100_000 + (i % 7) * 10_000)))
         prev = close
     return strategy, ctx
 
 
-def _wavy_series(n: int = 400) -> list[float]:
+def _wavy_series(n: int = 400) -> list[Decimal]:
     import math
 
-    return [round(100 + i * 0.05 + 6 * math.sin(i / 7.0), 2) for i in range(n)]
+    return [Decimal(str(round(100 + i * 0.05 + 6 * math.sin(i / 7.0), 2))) for i in range(n)]
 
 
 @pytest.mark.parametrize(
@@ -294,7 +333,7 @@ def test_pr_steps_run_on_the_wheel_ledger(
     strategy.on_stop()
 
 
-def _pullback_bars() -> list[object]:
+def _pullback_bars() -> list[WheelBar]:
     """One NSE session of 1m bars: an up-trend with sine pullbacks.
 
     The first up bar after a down leg carries a 2-point hammer wick, so the
@@ -312,13 +351,13 @@ def _pullback_bars() -> list[object]:
         Decimal(100) + Decimal("0.4") * i + Decimal(str(round(4 * math.sin(i / 9), 2)))
         for i in range(60)
     ]
-    bars: list[object] = []
+    bars: list[WheelBar] = []
     prev, prev_up = closes[0], True
     for i, close in enumerate(closes):
         up = close > prev
         low = min(prev, close) - half - (hammer if up and not prev_up else 0)
         ts = open_ns + i * 60_000_000_000
-        bars.append(WheelBar(iid, ts, prev, max(prev, close) + half, low, close, 100_000))
+        bars.append(WheelBar(iid, ts, prev, max(prev, close) + half, low, close, Decimal(100_000)))
         prev, prev_up = close, up
     return bars
 

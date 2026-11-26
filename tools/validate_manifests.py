@@ -17,6 +17,7 @@ import json
 import sys
 import tomllib
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 # Make the strategy package importable when the tool runs from a source tree.
@@ -38,22 +39,22 @@ def load_strategy_manifests() -> dict[str, set[str]]:
     return registry
 
 
-def load_validator(schema_path: Path):
+def load_validator(schema_path: Path) -> Any:
     try:
-        import jsonschema  # type: ignore[import-not-found]
+        import jsonschema
 
         return jsonschema.Draft7Validator(json.loads(schema_path.read_text()))
     except ImportError:
         return None
 
 
-def schema_errors(data: dict[str, object], validator: object) -> list[str]:
+def schema_errors(data: dict[str, object], validator: Any) -> list[str]:
     if validator is None:
         return []
     return sorted(str(error.message) for error in validator.iter_errors(data))
 
 
-def validate_strategy_manifest(path: Path, validator: object) -> list[str]:
+def validate_strategy_manifest(path: Path, validator: Any) -> list[str]:
     data = tomllib.loads(path.read_text())
     errors = schema_errors(data, validator)
     strategies = importlib.import_module("tantra_strategies")
@@ -70,7 +71,7 @@ def validate_strategy_manifest(path: Path, validator: object) -> list[str]:
 
 
 def validate_basket_manifest(
-    path: Path, validator: object, registry: dict[str, set[str]]
+    path: Path, validator: Any, registry: dict[str, set[str]]
 ) -> list[str]:
     data = tomllib.loads(path.read_text())
     errors = schema_errors(data, validator)

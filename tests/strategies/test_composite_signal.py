@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
 from conftest import make_bars
 
@@ -22,7 +23,7 @@ INSTRUMENT = "NSE:RELIANCE-EQ"
 
 
 def cfg(**overrides: object) -> CompositeSignalConfig:
-    values: dict[str, object] = dict(
+    values: dict[str, Any] = dict(
         delivery_lookback=20,
         delivery_spike_multiple=Decimal("1.5"),
         delivery_min_pct=Decimal("40"),

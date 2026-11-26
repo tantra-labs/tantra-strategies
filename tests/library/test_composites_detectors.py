@@ -67,7 +67,7 @@ def test_pr_single_step_moves_center_by_atr() -> None:
     v = pr.update(b)
     assert v.center_step == 1
     assert v.center == D(100) + atr
-    assert v.r1 is not None and abs((v.r1 - v.center) - atr / 2) < EPS
+    assert v.r1 is not None and v.center is not None and abs((v.r1 - v.center) - atr / 2) < EPS
 
 
 def test_pr_step_down_and_single_step_on_gap() -> None:
@@ -91,7 +91,7 @@ def test_pr_step_down_and_single_step_on_gap() -> None:
     assert atr2 is not None
     v2 = pr2.update(b3)
     assert v2.center_step == -1 and v2.center == D(100) - atr2
-    assert v2.s1 is not None and abs((v2.center - v2.s1) - atr2 / 2) < EPS
+    assert v2.s1 is not None and v2.center is not None and abs((v2.center - v2.s1) - atr2 / 2) < EPS
 
 
 def test_pr_hold_frozen_across_non_step_bars() -> None:

@@ -60,6 +60,7 @@ def test_percentile_parity_with_extractor() -> None:
         last = ez.update(b)
         tr.update(b)
     assert len(tr.completed) == 3
+    assert last is not None
     # Percentile mode (>=2 completed sessions): s1 = open - P25(drawdowns), differs from phi mode.
     ctx = ZoneExtractionContext(
         "X",
@@ -72,7 +73,6 @@ def test_percentile_parity_with_extractor() -> None:
     )
     lm = ElephantZonesExtractor().extract(ctx)
     prices = {lv.level_id: lv.price for lv in lm.levels}
-    assert last is not None
     assert (last.s1, last.s2, last.r1, last.r2) == (
         prices["ee:s1"],
         prices["ee:s2"],

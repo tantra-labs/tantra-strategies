@@ -44,6 +44,7 @@ def test_fallback_level_map_ore_extensions() -> None:
     )
 
     assert strategy._fallback is True
+    assert strategy._level_map is not None
     levels = {level.level_id: level for level in strategy._level_map.levels}
     assert levels["ee:s1"].price == Decimal("94.028")
     assert levels["ee:s2"].price == Decimal("90.028")
@@ -77,6 +78,7 @@ def test_fallback_level_map_percentile_variant() -> None:
         ],
     )
 
+    assert strategy._level_map is not None
     levels = {level.level_id: level for level in strategy._level_map.levels}
     # downs [4, 10] -> p25 = p35 = 4; ups [4, 6] -> p63 = p74 = 6
     assert levels["ee:s1"].price == Decimal("96")
@@ -101,6 +103,7 @@ def test_support_level_full_confluence_scores_four() -> None:
     context.seed_options(support_snapshot())
     strategy.run(context, warmup(22))
 
+    assert strategy._level_map is not None
     levels = {level.level_id: level for level in strategy._level_map.levels}
     assert levels["s1"].score == 4
     assert levels["s1"].price == Decimal("100")

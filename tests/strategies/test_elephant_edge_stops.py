@@ -86,6 +86,7 @@ def test_sl_placed_beyond_band_plus_buffer() -> None:
     assert state.stop.trail_distance == Decimal("2.0")
     assert state.stop.activation_after_r == Decimal("1.0")
     # the stop must never rest inside the level band
+    assert strategy._level_map is not None
     band_low, band_high = next(
         level for level in strategy._level_map.levels if level.level_id == "s1"
     ).band()

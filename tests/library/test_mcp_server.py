@@ -6,6 +6,7 @@ import sys
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -170,7 +171,7 @@ def test_search_lists_by_kind_without_query() -> None:
         }
     )
     assert reply is not None
-    result = reply["result"]
+    result = cast(dict[str, Any], reply["result"])
     assert result["isError"] is False, result
     items = json.loads(result["content"][0]["text"])
     assert {i["kind"] for i in items} == {"composite"}

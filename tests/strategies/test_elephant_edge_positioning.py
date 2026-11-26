@@ -73,6 +73,7 @@ def test_alternate_mode_side_switching() -> None:
     context.seed_options(support_snapshot())
     strategy.run(context, warmup(22))  # ATR 2.0 exactly, volume average ready
 
+    assert strategy._level_map is not None
     level = next(level for level in strategy._level_map.levels if level.level_id == "s1")
     trigger = bar(*HAMMER)
     context.feed(trigger)
